@@ -592,7 +592,7 @@ All gates green. Commit:
 
 ## 10. Immediate next milestone
 
-> **Status (2026-08-12):** Milestones 2B through 7 are complete — see §9 for the proven device output and **`docs/device/README.md`** for the canonical device-facts wiki (verified-facts reference, firmware-versioned). The remaining roadmap is later product work per §11: the local library, error abstraction, device selection for multiple Kindles, and the GUI/async decisions. The `.mf`/`.yjf` metadata milestone concluded that the per-book device files carry only delivery/caching data (no titles/authors/covers); sidecar metadata-handle association is now real, and covers were found in `system/thumbnails/` (tiny GIFs; sideloaded hash→book mapping still unknown).
+> **Status (2026-08-12):** Milestones 2B through 7 are complete — see §9 for the proven device output and **`docs/device/README.md`** for the canonical device-facts wiki (verified-facts reference, firmware-versioned). The error abstraction slice (§17) is also complete — `KindredError` is the unified device-layer error. The remaining roadmap is later product work per §11: the local library, device selection for multiple Kindles, and the GUI/async decisions. The `.mf`/`.yjf` metadata milestone concluded that the per-book device files carry only delivery/caching data (no titles/authors/covers); sidecar metadata-handle association is now real, and covers were found in `system/thumbnails/` (tiny GIFs; sideloaded hash→book mapping still unknown).
 
 ### Milestone 2B: read-only MTP root enumeration
 
@@ -889,6 +889,17 @@ Hardware applications must expect imperfect conditions. Design for at least:
 - firmware/device behaviour changes
 
 Translate low-level errors into useful Kindred/application errors when enough information exists.
+
+**Implemented (2026-08-12):** `crates/kindred/src/error.rs` defines `KindredError`, the unified
+Kindred device-layer error. Variants map the failure modes above (NoDevice, UnsupportedModel,
+DeviceBusy, PermissionDenied, AccessDenied, StorageFull, Disconnected, Timeout, StaleObject,
+NotFound, InvalidObject) with `From` conversions from `rusb::Error`, `mtp_rs::Error`, and
+`mtp_rs::UploadError`. Unmapped low-level errors are preserved inside `Usb`/`Mtp` variants so
+the original diagnostic context survives (`source()` is wired for I/O/USB/MTP). All device-facing
+functions in `usb.rs`, `mtp.rs`, `inventory.rs`, `manage.rs`, `transfer.rs` and
+`profile::identify_attached` now return `KindredError`. `UnsupportedModel` is reserved for future
+multi-model discovery work (currently `discover_kindles` skips unknown models). The CLI keeps
+`Box<dyn Error>` and prints the friendly `Display` message.
 
 Do not hide the original diagnostic context entirely. A friendly UI message and a useful debug/log cause can coexist.
 

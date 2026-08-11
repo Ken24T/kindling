@@ -1,5 +1,7 @@
 use mtp_rs::mtp::MtpDevice;
 
+use crate::error::KindredError;
+
 #[derive(Debug, Clone)]
 pub struct MtpStorageSummary {
     pub description: String,
@@ -14,7 +16,7 @@ pub struct MtpProbe {
     pub storages: Vec<MtpStorageSummary>,
 }
 
-pub async fn probe_first_mtp_device() -> Result<MtpProbe, mtp_rs::Error> {
+pub async fn probe_first_mtp_device() -> Result<MtpProbe, KindredError> {
     let device = MtpDevice::open_first().await?;
 
     let device_info = device.device_info();
@@ -74,7 +76,7 @@ pub struct MtpStorageListing {
 /// Open the first MTP device and enumerate the root of each storage.
 ///
 /// `None` as the parent denotes the storage root in the `mtp-rs` API.
-pub async fn list_storage_roots() -> Result<Vec<MtpStorageListing>, mtp_rs::Error> {
+pub async fn list_storage_roots() -> Result<Vec<MtpStorageListing>, KindredError> {
     let device = MtpDevice::open_first().await?;
 
     let mut listings = Vec::new();
@@ -103,7 +105,7 @@ pub struct MtpDocumentsListing {
 
 /// Locate the root `documents` folder on the first MTP device storage that has
 /// one, then enumerate its immediate children.
-pub async fn list_documents() -> Result<Option<MtpDocumentsListing>, mtp_rs::Error> {
+pub async fn list_documents() -> Result<Option<MtpDocumentsListing>, KindredError> {
     let device = MtpDevice::open_first().await?;
 
     for storage in device.storages().await? {
@@ -132,7 +134,7 @@ pub async fn list_documents() -> Result<Option<MtpDocumentsListing>, mtp_rs::Err
 /// List the immediate children of a folder by MTP handle on the first device.
 ///
 /// Returns `None` when no storage/device is available.
-pub async fn list_folder_children(handle: u64) -> Result<Option<MtpStorageListing>, mtp_rs::Error> {
+pub async fn list_folder_children(handle: u64) -> Result<Option<MtpStorageListing>, KindredError> {
     let device = MtpDevice::open_first().await?;
 
     let mut storages = device.storages().await?;

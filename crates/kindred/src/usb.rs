@@ -1,3 +1,5 @@
+use crate::error::KindredError;
+
 pub const AMAZON_VENDOR_ID: u16 = 0x1949;
 pub const PAPERWHITE_12_PRODUCT_ID: u16 = 0x9981;
 
@@ -21,7 +23,7 @@ impl UsbKindle {
     }
 }
 
-pub fn discover_kindles() -> Result<Vec<UsbKindle>, rusb::Error> {
+pub fn discover_kindles() -> Result<Vec<UsbKindle>, KindredError> {
     let devices = rusb::devices()?;
     let mut kindles = Vec::new();
 

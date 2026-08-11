@@ -10,6 +10,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::error::KindredError;
 use crate::usb::discover_kindles;
 
 /// A locally-named device profile keyed by stable USB serial.
@@ -88,7 +89,7 @@ pub struct DeviceIdentity {
 }
 
 /// Identify the currently attached Kindle from USB discovery plus the store.
-pub fn identify_attached(store: &ProfileStore) -> Result<Option<DeviceIdentity>, rusb::Error> {
+pub fn identify_attached(store: &ProfileStore) -> Result<Option<DeviceIdentity>, KindredError> {
     let Some(kindle) = discover_kindles()?.into_iter().next() else {
         return Ok(None);
     };

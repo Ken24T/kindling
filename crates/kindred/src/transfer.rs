@@ -9,6 +9,8 @@ use bytes::Bytes;
 use futures_util::stream;
 use mtp_rs::mtp::{MtpDevice, NewObjectInfo, ObjectHandle, Storage};
 
+use crate::error::KindredError;
+
 /// Name prefix of the dedicated test folder created under `documents/`.
 pub const TEST_FOLDER_PREFIX: &str = "kindling_m4_test";
 
@@ -28,10 +30,10 @@ pub struct TransferTestResult {
 /// The test folder is created under `documents/` with a unique name and is
 /// removed on success. On failure the folder is removed if possible so no
 /// partial artifact is ever left behind.
-pub async fn run_controlled_transfer_test() -> Result<TransferTestResult, mtp_rs::Error> {
+pub async fn run_controlled_transfer_test() -> Result<TransferTestResult, KindredError> {
     let device = MtpDevice::open_first().await?;
     let mut storages = device.storages().await?;
-    let storage = storages.pop().ok_or(mtp_rs::Error::NoDevice)?;
+    let storage = storages.pop().ok_or(KindredError::NoDevice)?;
 
     let documents = find_documents(&storage).await?;
     let folder_name = format!("{TEST_FOLDER_PREFIX}_{}", timestamp_suffix());
@@ -51,7 +53,7 @@ async fn run_test_body(
     storage: &Storage,
     folder: ObjectHandle,
     folder_name: &str,
-) -> Result<TransferTestResult, mtp_rs::Error> {
+) -> Result<TransferTestResult, KindredError> {
     let file_name = "kindling_controlled_test.txt".to_owned();
     let payload = b"kindling controlled transfer test\n".to_vec();
 
@@ -68,7 +70,7 @@ async fn run_test_body(
         .iter()
         .any(|object| object.filename == file_name && !object.is_folder());
     if !found {
-        return Err(mtp_rs::Error::InvalidData {
+        return Err(KindredError::InvalidObject {
             message: "uploaded artifact not found in test folder".to_owned(),
         });
     }
@@ -90,12 +92,12 @@ async fn run_test_body(
     })
 }
 
-async fn find_documents(storage: &Storage) -> Result<ObjectHandle, mtp_rs::Error> {
+async fn find_documents(storage: &Storage) -> Result<ObjectHandle, KindredError> {
     let root = storage.list_objects(None).await?;
     root.iter()
         .find(|object| object.is_folder() && object.filename == "documents")
         .map(|object| object.handle)
-        .ok_or(mtp_rs::Error::NotFound)
+        .ok_or(KindredError::NotFound)
 }
 
 fn timestamp_suffix() -> u64 {

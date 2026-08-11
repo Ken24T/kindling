@@ -5,6 +5,7 @@
 //! observed on the physical Paperwhite (see PLAN.md and the project
 //! instructions §9).
 
+use crate::error::KindredError;
 use crate::mtp::MtpObjectSummary;
 
 use mtp_rs::mtp::{MtpDevice, Storage};
@@ -70,7 +71,7 @@ pub struct KindleInventory {
 /// One MTP session is opened for the whole walk. For every book the contents
 /// of its `.sdr` sidecar folder are inspected so the real metadata handles
 /// (`.mf`/`.yjf`/`.meta`) are associated with the book.
-pub async fn inventory_device() -> Result<Option<KindleInventory>, mtp_rs::Error> {
+pub async fn inventory_device() -> Result<Option<KindleInventory>, KindredError> {
     let device = MtpDevice::open_first().await?;
     let mut storages = device.storages().await?;
     let Some(storage) = storages.pop() else {
@@ -134,11 +135,12 @@ pub async fn inventory_device() -> Result<Option<KindleInventory>, mtp_rs::Error
 async fn list_children(
     storage: &Storage,
     parent: u64,
-) -> Result<Vec<MtpObjectSummary>, mtp_rs::Error> {
+) -> Result<Vec<MtpObjectSummary>, KindredError> {
     storage
         .list_objects(Some(mtp_rs::mtp::ObjectHandle(parent)))
         .await
         .map(to_summaries)
+        .map_err(KindredError::from)
 }
 
 /// Convert raw MTP object info into Kindred-owned summaries.

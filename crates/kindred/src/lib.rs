@@ -1,3 +1,4 @@
+mod error;
 mod inventory;
 mod library;
 mod manage;
@@ -5,6 +6,8 @@ mod mtp;
 mod profile;
 mod transfer;
 mod usb;
+
+pub use error::KindredError;
 
 pub use inventory::{Book, BookFormat, KindleInventory, inventory_device, parse_book_filename};
 

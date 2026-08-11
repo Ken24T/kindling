@@ -62,7 +62,11 @@ attached at a time** — there is no multi-device selection; `open_first()` stay
    verified-facts reference (storage tree, file-type catalog, transport quirks,
    versioned unknowns, safety notes). Covers found in `system/thumbnails/` (tiny GIFs);
    sideloaded thumbnail hash→book mapping is an open question.
-5. Error abstraction follows the growing app layer.
+5. Error abstraction — **done**: `KindredError` (`error.rs`) is the unified device-layer
+   error over `rusb`/`mtp-rs` with §17 categories (NoDevice, DeviceBusy, Disconnected,
+   Timeout, StorageFull, AccessDenied, PermissionDenied, StaleObject, NotFound,
+   InvalidObject, UnsupportedModel); unmapped low-level errors preserved as `Usb`/`Mtp`
+   for diagnostics. All device-facing functions now return it.
 6. GUI framework decision (criteria + shortlist) before the app layer.
 7. Kindle Collections — read-only investigation only (see below).
 

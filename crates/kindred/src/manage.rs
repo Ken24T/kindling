@@ -10,6 +10,7 @@ use bytes::Bytes;
 use futures_util::stream;
 use mtp_rs::mtp::{MtpDevice, NewObjectInfo, ObjectHandle, Storage};
 
+use crate::error::KindredError;
 use crate::inventory::{Book, BookFormat};
 
 /// Prefix for artifacts added by Kindling itself (controlled test files).
@@ -19,16 +20,16 @@ pub const ADDED_PREFIX: &str = "kindling_";
 ///
 /// The destination file is named after the book's on-device content file
 /// (`Title_ASIN.ext`), preserving the original name. Read-only on the device.
-pub async fn copy_book_from_kindle(book: &Book, dest_dir: &Path) -> Result<PathBuf, mtp_rs::Error> {
+pub async fn copy_book_from_kindle(book: &Book, dest_dir: &Path) -> Result<PathBuf, KindredError> {
     let device = MtpDevice::open_first().await?;
     let mut storages = device.storages().await?;
-    let storage = storages.pop().ok_or(mtp_rs::Error::NoDevice)?;
+    let storage = storages.pop().ok_or(KindredError::NoDevice)?;
 
     let info = storage
         .get_object_info(ObjectHandle(book.content_handle))
         .await?;
     if info.is_folder() {
-        return Err(mtp_rs::Error::InvalidData {
+        return Err(KindredError::InvalidObject {
             message: "book content handle is not a file".to_owned(),
         });
     }
@@ -38,31 +39,27 @@ pub async fn copy_book_from_kindle(book: &Book, dest_dir: &Path) -> Result<PathB
         .await?;
 
     let dest = dest_dir.join(content_filename(book));
-    std::fs::write(&dest, bytes).map_err(|error| mtp_rs::Error::Io {
-        message: format!("failed to write {}: {error}", dest.display()),
-    })?;
+    std::fs::write(&dest, bytes)?;
 
     Ok(dest)
 }
 
 /// Copy a local file onto the Kindle into `documents/` — the classic
 /// sideload location. Returns the new object handle.
-pub async fn add_book_to_kindle(local_path: &Path) -> Result<u64, mtp_rs::Error> {
-    let bytes = std::fs::read(local_path).map_err(|error| mtp_rs::Error::Io {
-        message: format!("failed to read {}: {error}", local_path.display()),
-    })?;
+pub async fn add_book_to_kindle(local_path: &Path) -> Result<u64, KindredError> {
+    let bytes = std::fs::read(local_path)?;
 
     let file_name = local_path
         .file_name()
         .and_then(|name| name.to_str())
-        .ok_or_else(|| mtp_rs::Error::InvalidData {
+        .ok_or_else(|| KindredError::InvalidObject {
             message: "local path has no usable filename".to_owned(),
         })?
         .to_owned();
 
     let device = MtpDevice::open_first().await?;
     let mut storages = device.storages().await?;
-    let storage = storages.pop().ok_or(mtp_rs::Error::NoDevice)?;
+    let storage = storages.pop().ok_or(KindredError::NoDevice)?;
 
     let documents = find_documents(&storage).await?;
 
@@ -79,10 +76,10 @@ pub async fn add_book_to_kindle(local_path: &Path) -> Result<u64, mtp_rs::Error>
 /// Every handle is validated against the device before deletion (expected
 /// filename and kind). Nothing is deleted on a mismatch, and only the handles
 /// recorded in `book` are ever targeted.
-pub async fn remove_book(book: &Book) -> Result<(), mtp_rs::Error> {
+pub async fn remove_book(book: &Book) -> Result<(), KindredError> {
     let device = MtpDevice::open_first().await?;
     let mut storages = device.storages().await?;
-    let storage = storages.pop().ok_or(mtp_rs::Error::NoDevice)?;
+    let storage = storages.pop().ok_or(KindredError::NoDevice)?;
 
     validate_and_delete(
         &storage,
@@ -115,17 +112,25 @@ pub async fn remove_book(book: &Book) -> Result<(), mtp_rs::Error> {
 /// prefix are deleted; anything else is refused with `AccessDenied`. This is
 /// the only handle-based delete and exists so Kindling can clean up its own
 /// test artifacts.
-pub async fn remove_added_object(handle: u64) -> Result<(), mtp_rs::Error> {
+pub async fn remove_added_object(handle: u64) -> Result<(), KindredError> {
     let device = MtpDevice::open_first().await?;
     let mut storages = device.storages().await?;
-    let storage = storages.pop().ok_or(mtp_rs::Error::NoDevice)?;
+    let storage = storages.pop().ok_or(KindredError::NoDevice)?;
 
     let info = storage.get_object_info(ObjectHandle(handle)).await?;
     if !info.filename.starts_with(ADDED_PREFIX) {
-        return Err(mtp_rs::Error::AccessDenied);
+        return Err(KindredError::InvalidObject {
+            message: format!(
+                "refusing to remove handle {handle}: filename '{}' is not Kindling-controlled",
+                info.filename
+            ),
+        });
     }
 
-    storage.delete(ObjectHandle(handle)).await
+    storage
+        .delete(ObjectHandle(handle))
+        .await
+        .map_err(KindredError::from)
 }
 
 /// Confirm an object still matches the expected kind/name, then delete it.
@@ -135,11 +140,11 @@ async fn validate_and_delete(
     handle: u64,
     expected_name: Option<&str>,
     expected_folder: bool,
-) -> Result<(), mtp_rs::Error> {
+) -> Result<(), KindredError> {
     let info = storage.get_object_info(ObjectHandle(handle)).await?;
 
     if info.is_folder() != expected_folder {
-        return Err(mtp_rs::Error::InvalidData {
+        return Err(KindredError::InvalidObject {
             message: format!(
                 "object handle {handle} is a {}, expected {}",
                 if info.is_folder() { "folder" } else { "file" },
@@ -151,18 +156,21 @@ async fn validate_and_delete(
     if let Some(name) = expected_name
         && info.filename != name
     {
-        return Err(mtp_rs::Error::StaleHandle);
+        return Err(KindredError::StaleObject);
     }
 
-    storage.delete(ObjectHandle(handle)).await
+    storage
+        .delete(ObjectHandle(handle))
+        .await
+        .map_err(KindredError::from)
 }
 
-async fn find_documents(storage: &Storage) -> Result<ObjectHandle, mtp_rs::Error> {
+async fn find_documents(storage: &Storage) -> Result<ObjectHandle, KindredError> {
     let root = storage.list_objects(None).await?;
     root.iter()
         .find(|object| object.is_folder() && object.filename == "documents")
         .map(|object| object.handle)
-        .ok_or(mtp_rs::Error::NotFound)
+        .ok_or(KindredError::NotFound)
 }
 
 /// Reconstruct the on-device content filename for a book.
