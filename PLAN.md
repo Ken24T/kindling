@@ -51,9 +51,52 @@ attached at a time** — there is no multi-device selection; `open_first()` stay
 
 1. Profile registry + serial correlation — **done** (`profile.rs`; CLI `identify`,
    `profiles`, `profile add`).
-2. Local JSON library (records + reconcile-on-connect).
+2. Local JSON library (records + reconcile-on-connect) — **next**.
 3. `.mf`/`.yjf` metadata enrichment feeds the library.
 4. Error abstraction follows the growing app layer.
+5. GUI framework decision (criteria + shortlist) before the app layer.
+6. Kindle Collections — read-only investigation only (see below).
+
+## Target UX — Explorer-style library manager (agreed 2026-08-12)
+
+The Kindling desktop UI follows a file-manager model familiar from Windows Explorer /
+Finder:
+
+- **Left pane:** collapsible logical sections — **Local Library** and **Kindle Library**
+  (per attached device). These are logical book sections, **not** a raw file tree: each
+  row is one aggregated `Book` (never the underlying `.kfx`/`.sdr`/`.mf` objects), so
+  storage internals stay hidden and book-group integrity is preserved.
+- **Right pane / preview:** metadata panel for the selected book (title, author, format,
+  size, ASIN, cover) — this is where `.mf`/`.yjf` enrichment pays off.
+- **View modes:** covers (default), list, and details/sortable-table — the Explorer
+  trio mapped to books.
+- **Transfers:** drag-and-drop between panes (local→Kindle = `add_book_to_kindle`,
+  Kindle→local = `copy_book_from_kindle`), plus context-menu/button equivalents;
+  safe-remove confirmation on any removal (content + sidecar).
+- **Status:** per-book badge — on-device / local-only / both — reconciled on connect.
+- **Extensibility:** the left-pane section model is data-driven so a future **Collections**
+  section can slot in if the investigation pans out.
+
+### GUI framework decision (due before the app layer)
+
+The UX above constrains the framework choice: tree/sections, list + grid + thumbnails,
+preview pane, and drag-drop, native-feeling on Windows and Linux. Shortlist to evaluate:
+**Tauri (+ React)** and **egui/eframe**; iced/Slint are viable alternatives. Decide by
+criteria (cross-platform maturity, drag-drop ergonomics, grid/thumbnail support, bundle
+size, native feel) before starting the app layer.
+
+## Kindle Collections — investigation only (2026-08-12)
+
+Collections on modern Kindle firmware (12th-gen, 5.19.x) are cloud-synced “Amazon
+Collections”, not the older USB-managed local collections. §12 of the instructions flags
+this as potentially difficult/unreliable over USB/MTP.
+
+- **Do not** design collection CRUD into the model, UI, or local library schema now.
+- **Future read-only investigation:** inspect the `system` area over MTP for collection
+  metadata on the physical device. If none is exposed, collections are out of scope for
+  the USB transport unless a Wi-Fi/cloud path is later built (separate future transport).
+- If the investigation finds usable local collection data, read-only display is the
+  realistic ceiling; conservative CRUD would require a further device-evidence pass.
 
 ## Device evidence base (from Milestones 2B/2C, 2026-08-12)
 
