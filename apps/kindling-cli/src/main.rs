@@ -1,5 +1,8 @@
 use futures::executor::block_on;
-use kindred::{discover_kindles, list_documents, list_storage_roots, probe_first_mtp_device};
+use kindred::{
+    discover_kindles, list_documents, list_folder_children, list_storage_roots,
+    probe_first_mtp_device,
+};
 
 fn masked_serial(serial: &str) -> String {
     let chars: Vec<char> = serial.chars().collect();
@@ -123,6 +126,28 @@ async fn mtp_documents() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+async fn mtp_folder(handle: u64) -> Result<(), Box<dyn std::error::Error>> {
+    let listing = list_folder_children(handle).await?;
+
+    let Some(listing) = listing else {
+        println!("No storage found for handle {handle}.");
+        return Ok(());
+    };
+
+    println!("Storage: {}", listing.description);
+    println!("Folder:   handle {handle}");
+    println!();
+    for object in listing.objects {
+        if object.is_folder {
+            println!("[DIR]  handle {:<10} {}", object.handle, object.filename);
+        } else {
+            println!("[FILE] handle {:<10} {}", object.handle, object.filename);
+        }
+    }
+
+    Ok(())
+}
+
 fn usage() {
     eprintln!("Usage: kindling-cli <command>");
     eprintln!();
@@ -131,6 +156,7 @@ fn usage() {
     eprintln!("  mtp-probe       Open the first MTP device and inspect its storage");
     eprintln!("  mtp-root        List the root objects of each MTP storage");
     eprintln!("  mtp-documents   List the contents of the root documents folder");
+    eprintln!("  mtp-folder <h>  List the contents of a folder by MTP handle");
 }
 
 fn main() {
@@ -139,6 +165,19 @@ fn main() {
         Some("mtp-probe") => block_on(mtp_probe()),
         Some("mtp-root") => block_on(mtp_root()),
         Some("mtp-documents") => block_on(mtp_documents()),
+        Some("mtp-folder") => {
+            let handle = match std::env::args()
+                .nth(2)
+                .and_then(|arg| arg.parse::<u64>().ok())
+            {
+                Some(handle) => handle,
+                None => {
+                    eprintln!("Usage: kindling-cli mtp-folder <handle>");
+                    std::process::exit(1);
+                }
+            };
+            block_on(mtp_folder(handle))
+        }
         _ => {
             usage();
             return;

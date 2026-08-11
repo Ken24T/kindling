@@ -125,3 +125,25 @@ pub async fn list_documents() -> Result<Option<MtpDocumentsListing>, mtp_rs::Err
 
     Ok(None)
 }
+
+/// List the immediate children of a folder by MTP handle on the first device.
+///
+/// Returns `None` when no storage/device is available.
+pub async fn list_folder_children(handle: u64) -> Result<Option<MtpStorageListing>, mtp_rs::Error> {
+    let device = MtpDevice::open_first().await?;
+
+    let mut storages = device.storages().await?;
+    let Some(storage) = storages.pop() else {
+        return Ok(None);
+    };
+
+    let info = storage.info();
+    let children = storage
+        .list_objects(Some(mtp_rs::mtp::ObjectHandle(handle)))
+        .await?;
+
+    Ok(Some(MtpStorageListing {
+        description: info.description.clone(),
+        objects: children.into_iter().map(MtpObjectSummary::from).collect(),
+    }))
+}
