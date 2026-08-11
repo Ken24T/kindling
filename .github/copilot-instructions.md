@@ -551,11 +551,48 @@ Commit:
 
 `1b3cd0f Associate sidecar metadata handles in device inventory`
 
+### Milestone 7: device wiki + full-tree capture
+
+Completed, tested against the physical Paperwhite, committed.
+
+Goal: capture a bounded but complete picture of the device (folders, file types,
+behaviour) and record it as a durable reference for future coding sessions, instead of
+letting device facts stay scattered across milestone narratives.
+
+Deliverable: **`docs/device/README.md`** is now the canonical device-facts reference
+(structure, transport quirks, storage tree map, file type catalog, cover-cache finding,
+versioned unknowns, safety notes, provenance). Every claim is marked `[verified, 5.19.5]`
+or `[unverified]`; handles are explicitly noted as transient; no identifiers or personal
+data (privacy §18).
+
+New hardware evidence captured (2026-08-12):
+
+- `system/version.txt` = `Kindle 5.19.5 (479431058)` — firmware confirmed from the device.
+- **Covers exist in `system/thumbnails/`**: `thumbnail_<ASIN>_EBOK_portrait.jpg` (store
+  books, classic ASINs) and `thumbnail_<hash>.jpg` (sideloaded) — but they are actually
+  **60×40 GIF89a images despite the `.jpg` extension**.
+- `system/` internals enumerated (logs, caches, audible activation, `Search Indexes`,
+  `bookcovers/`, `grok_thumbnails/` empty, etc.) — firmware area, do not modify.
+- `audible/` = `default.hushpuppy.db` + i18n XML; `voice/` = TTS language packs;
+  `fonts/` = user font area (readme); `screenshots/` = empty.
+- `FILE_SYSTEM_ACCESSIBILITY_FLAG` = 16-byte blank file — semantics still unknown.
+- `driveinfo.calibre` / `metadata.calibre` confirmed as calibre-private JSON (the latter
+  holds real titles/authors **only for calibre-managed books**) — interop note, do not
+  depend (§12).
+- `documents/.cache/kf8/` = MD5-named per-book cache files; `Downloads/Items01/`
+  confirmed again with `.pdf`-sourced `.kfx` sideloads present.
+- CLI `mtp-root`/`mtp-documents` now print MTP handles (diagnostic convenience for
+  exploration; handles remain transient, never identity).
+
+All gates green. Commit:
+
+`7cc4968 Add device wiki and full-tree capture (Milestone 7)`
+
 ---
 
 ## 10. Immediate next milestone
 
-> **Status (2026-08-12):** Milestones 2B through 6 are complete — see §9 for the proven device output. The remaining roadmap is later product work per §11: the local library, error abstraction, device selection for multiple Kindles, and the GUI/async decisions. The `.mf`/`.yjf` metadata milestone concluded that the per-book device files carry only delivery/caching data (no titles/authors/covers); sidecar metadata-handle association is now real.
+> **Status (2026-08-12):** Milestones 2B through 7 are complete — see §9 for the proven device output and **`docs/device/README.md`** for the canonical device-facts wiki (verified-facts reference, firmware-versioned). The remaining roadmap is later product work per §11: the local library, error abstraction, device selection for multiple Kindles, and the GUI/async decisions. The `.mf`/`.yjf` metadata milestone concluded that the per-book device files carry only delivery/caching data (no titles/authors/covers); sidecar metadata-handle association is now real, and covers were found in `system/thumbnails/` (tiny GIFs; sideloaded hash→book mapping still unknown).
 
 ### Milestone 2B: read-only MTP root enumeration
 

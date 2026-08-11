@@ -36,9 +36,9 @@ pub async fn mtp_root() -> Result<(), Box<dyn std::error::Error>> {
         println!();
         for object in listing.objects {
             if object.is_folder {
-                println!("[DIR]  {}", object.filename);
+                println!("[DIR]  handle {:<10} {}", object.handle, object.filename);
             } else {
-                println!("[FILE] {}", object.filename);
+                println!("[FILE] handle {:<10} {}", object.handle, object.filename);
             }
         }
         println!();
@@ -60,9 +60,9 @@ pub async fn mtp_documents() -> Result<(), Box<dyn std::error::Error>> {
     println!();
     for object in listing.objects {
         if object.is_folder {
-            println!("[DIR]  {}", object.filename);
+            println!("[DIR]  handle {:<10} {}", object.handle, object.filename);
         } else {
-            println!("[FILE] {}", object.filename);
+            println!("[FILE] handle {:<10} {}", object.handle, object.filename);
         }
     }
 

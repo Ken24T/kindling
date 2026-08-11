@@ -58,9 +58,13 @@ attached at a time** — there is no multi-device selection; `open_first()` stay
    device files are delivery/caching data (`.mf` JSON delivery metadata, `.meta` download
    cache, `.yjf` whisperstore marker); no titles/authors/covers. Sidecar metadata-handle
    association is now wired into the inventory.
-4. Error abstraction follows the growing app layer.
-5. GUI framework decision (criteria + shortlist) before the app layer.
-6. Kindle Collections — read-only investigation only (see below).
+4. Device wiki — **done** (Milestone 7): `docs/device/README.md` is the canonical
+   verified-facts reference (storage tree, file-type catalog, transport quirks,
+   versioned unknowns, safety notes). Covers found in `system/thumbnails/` (tiny GIFs);
+   sideloaded thumbnail hash→book mapping is an open question.
+5. Error abstraction follows the growing app layer.
+6. GUI framework decision (criteria + shortlist) before the app layer.
+7. Kindle Collections — read-only investigation only (see below).
 
 ## Target UX — Explorer-style library manager (agreed 2026-08-12)
 
@@ -106,6 +110,10 @@ this as potentially difficult/unreliable over USB/MTP.
   realistic ceiling; conservative CRUD would require a further device-evidence pass.
 
 ## Device evidence base (from Milestones 2B/2C, 2026-08-12)
+
+The full, maintained reference for device structure is **`docs/device/README.md`** — a
+verified-facts wiki (firmware-versioned, no identifiers, handles noted as transient).
+The summary below is a compact index:
 
 - Storage root contains `documents`, `system`, `fonts`, `screenshots`, `voice`,
   `audible`, plus calibre files (`metadata.calibre`, `driveinfo.calibre`) and
