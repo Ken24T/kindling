@@ -1,4 +1,5 @@
-use kindred::discover_kindles;
+use futures::executor::block_on;
+use kindred::{discover_kindles, probe_first_mtp_device};
 
 fn masked_serial(serial: &str) -> String {
     let chars: Vec<char> = serial.chars().collect();
@@ -23,10 +24,9 @@ fn devices() -> Result<(), Box<dyn std::error::Error>> {
 
     for kindle in kindles {
         println!("Kindle detected");
-        println!();
-        println!("Model:      {}", kindle.model_name());
+        println!("Model:        {}", kindle.model_name());
         println!(
-            "USB ID:     {:04x}:{:04x}",
+            "USB ID:       {:04x}:{:04x}",
             kindle.vendor_id, kindle.product_id
         );
 
@@ -35,20 +35,43 @@ fn devices() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         if let Some(product) = &kindle.product {
-            println!("Product:    {product}");
+            println!("Product:      {product}");
         }
 
         if let Some(serial) = &kindle.serial {
-            println!("Serial:     {}", masked_serial(serial));
+            println!("Serial:       {}", masked_serial(serial));
         } else {
-            println!("Serial:     <unavailable>");
+            println!("Serial:       <unavailable>");
         }
 
         println!(
-            "Location:   bus {} device {}",
+            "Location:     bus {} device {}",
             kindle.bus_number, kindle.device_address
         );
-        println!("Transport:  USB");
+        println!("Transport:    USB");
+    }
+
+    Ok(())
+}
+
+async fn mtp_probe() -> Result<(), Box<dyn std::error::Error>> {
+    let probe = probe_first_mtp_device().await?;
+
+    println!("MTP device opened");
+    println!("Manufacturer: {}", probe.manufacturer);
+    println!("Model:        {}", probe.model);
+
+    for storage in probe.storages {
+        println!();
+        println!("Storage:      {}", storage.description);
+        println!(
+            "Capacity:     {:.2} GB",
+            storage.total_capacity_bytes as f64 / 1_000_000_000.0
+        );
+        println!(
+            "Free space:   {:.2} GB",
+            storage.free_space_bytes as f64 / 1_000_000_000.0
+        );
     }
 
     Ok(())
@@ -58,17 +81,22 @@ fn usage() {
     eprintln!("Usage: kindling-cli <command>");
     eprintln!();
     eprintln!("Commands:");
-    eprintln!("  devices    List connected supported Kindle devices");
+    eprintln!("  devices     List connected supported Kindle devices");
+    eprintln!("  mtp-probe   Open the first MTP device and inspect its storage");
 }
 
 fn main() {
-    match std::env::args().nth(1).as_deref() {
-        Some("devices") => {
-            if let Err(error) = devices() {
-                eprintln!("Error: {error}");
-                std::process::exit(1);
-            }
+    let result = match std::env::args().nth(1).as_deref() {
+        Some("devices") => devices(),
+        Some("mtp-probe") => block_on(mtp_probe()),
+        _ => {
+            usage();
+            return;
         }
-        _ => usage(),
+    };
+
+    if let Err(error) = result {
+        eprintln!("Error: {error}");
+        std::process::exit(1);
     }
 }
