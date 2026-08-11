@@ -586,7 +586,7 @@ New hardware evidence captured (2026-08-12):
 
 All gates green. Commit:
 
-`7cc4968 Add device wiki and full-tree capture (Milestone 7)`
+`9acc1d6 Add device wiki and full-tree capture (Milestone 7)`
 
 ---
 
