@@ -63,14 +63,17 @@ pub struct KindleInventory {
 
 /// Build the device inventory from the physical Kindle.
 ///
-/// Books are read from `documents/Downloads/Items01/`; dictionaries from
-/// `documents/dictionaries/`. Read-only; never modifies the device.
+/// Books are read from `documents/` (root sideloads), `documents/Downloads/Items01/`
+/// and `documents/dictionaries/`. Read-only; never modifies the device.
 pub async fn inventory_device() -> Result<Option<KindleInventory>, mtp_rs::Error> {
     let Some(documents) = list_documents().await? else {
         return Ok(None);
     };
 
     let mut books = Vec::new();
+
+    // Books sideloaded directly in the documents/ root.
+    books.extend(books_from_folder(&documents.objects));
 
     // Book content area: documents/Downloads/Items01/
     if let Some(downloads) = find_folder(&documents.objects, "Downloads")
@@ -307,5 +310,25 @@ mod tests {
 
         assert_eq!(books.len(), 1);
         assert!(books[0].metadata_handles.is_empty());
+    }
+
+    #[test]
+    fn documents_root_sideload_is_found_alongside_folders() {
+        let objects = [
+            object(
+                "Moresome 3_ Key West_QLHYMITS2CQGJKXWY4E4VZAKG2H3XP2Q.kfx",
+                false,
+            ),
+            object(".cache", true),
+            object("My Clippings.sdr", true),
+            object("dictionaries", true),
+            object("Downloads", true),
+        ];
+
+        let books = books_from_folder(&objects);
+
+        assert_eq!(books.len(), 1);
+        assert_eq!(books[0].title, "Moresome 3_ Key West");
+        assert!(books[0].sidecar_handle.is_none());
     }
 }
