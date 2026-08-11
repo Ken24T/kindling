@@ -454,11 +454,42 @@ Commit:
 
 `1b5927e Add Kindle inventory model (Milestone 3)`
 
+### Milestone 4: controlled transfer proof
+
+Completed, tested against the physical Paperwhite, committed — with explicit write-milestone approval (2026-08-12).
+
+Proven behaviour from:
+
+```bash
+cargo run -p kindling-cli -- mtp-write-test
+```
+
+Observed output:
+
+```text
+Controlled transfer test:
+  folder:     kindling_m4_test_1786489330
+  uploaded:   kindling_controlled_test.txt (34 bytes)
+  readback:   verified
+  cleaned up: yes
+```
+
+Key results:
+
+- Upload, listing-verification, byte-for-byte readback and cleanup all succeed through pure-Rust `mtp-rs` on the physical Paperwhite.
+- The test is tightly scoped: a dedicated `kindling_m4_test_<timestamp>` folder under `documents/` is created, filled with one 34-byte artifact, verified, then removed.
+- Inventory before and after the test: **60 books, unchanged**; no leftover artifacts; storage root untouched.
+- Kindred deliberately exposes exactly one write path (`run_controlled_transfer_test`) — no broad low-level write/delete primitives leak into the application layer.
+
+Commit:
+
+`81f6b89 Add controlled transfer proof (Milestone 4)`
+
 ---
 
 ## 10. Immediate next milestone
 
-> **Status (2026-08-12):** Milestones 2B, 2C and 3 are complete — see §9 for the proven device output. The next milestone is Milestone 4 (controlled transfer proof), which requires explicit write-milestone approval per §12.
+> **Status (2026-08-12):** Milestones 2B, 2C, 3 and 4 are complete — see §9 for the proven device output. Milestone 4's controlled write test was explicitly approved and executed safely. The next milestone is Milestone 5 (safe device-management operations) per §11.
 
 ### Milestone 2B: read-only MTP root enumeration
 
@@ -839,8 +870,8 @@ Current state (2026-08-12):
 - Root and `documents/` enumeration are proven on the physical Paperwhite.
 - The repo runs the TCTBP staged branch model (§22); work continues on `development`.
 - The Milestone 3 planning session is complete; the agreed scope is recorded in `PLAN.md` (root).
-- Milestone 3 (Kindle inventory model) is complete — see §9.
-- **Next step:** Milestone 4 (controlled transfer proof), which requires explicit write-milestone approval per §12. The `.mf`/`.yjf` metadata question is queued for a later metadata milestone.
+- Milestones 3 and 4 are complete — see §9 (inventory model, and the controlled transfer proof with explicit write approval).
+- **Next step:** Milestone 5 (safe device-management operations) per §11, planned before implementation. The `.mf`/`.yjf` metadata question is queued for a later metadata milestone.
 
 A good next sequence is:
 
