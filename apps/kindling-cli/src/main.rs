@@ -17,6 +17,9 @@ fn usage() {
     eprintln!("  add-book <path>    Copy a local file to the Kindle documents folder");
     eprintln!("  remove-book <asin> Remove a book (content + sidecar) by ASIN");
     eprintln!("  remove-added <h>   Remove a Kindling-controlled object by handle");
+    eprintln!("  identify           Identify the attached Kindle (serial + profile)");
+    eprintln!("  profiles           List local device profiles");
+    eprintln!("  profile add <n>    Profile the attached Kindle with a friendly name");
 }
 
 fn main() {
@@ -76,6 +79,18 @@ fn main() {
                 }
             };
             block_on(commands::remove_added(handle))
+        }
+        Some("identify") => block_on(commands::identify()),
+        Some("profiles") => block_on(commands::list_profiles()),
+        Some("profile") => {
+            let mut args = std::env::args().skip(2);
+            match (args.next().as_deref(), args.next()) {
+                (Some("add"), Some(name)) => block_on(commands::add_profile(&name)),
+                _ => {
+                    eprintln!("Usage: kindling-cli profile add <name>");
+                    std::process::exit(1);
+                }
+            }
         }
         _ => {
             usage();

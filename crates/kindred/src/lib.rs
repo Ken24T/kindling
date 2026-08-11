@@ -1,6 +1,7 @@
 mod inventory;
 mod manage;
 mod mtp;
+mod profile;
 mod transfer;
 mod usb;
 
@@ -12,6 +13,8 @@ pub use mtp::{
     MtpDocumentsListing, MtpObjectSummary, MtpProbe, MtpStorageListing, MtpStorageSummary,
     list_documents, list_folder_children, list_storage_roots, probe_first_mtp_device,
 };
+
+pub use profile::{DeviceIdentity, DeviceProfile, ProfileError, ProfileStore, identify_attached};
 
 pub use transfer::{TransferTestResult, run_controlled_transfer_test};
 
