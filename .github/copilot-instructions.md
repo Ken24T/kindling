@@ -410,8 +410,9 @@ Key results:
 
 - The root `documents` folder was located (MTP handle 4541) and its immediate children enumerated.
 - `My Clippings.sdr` confirms the `.sdr` sidecar-folder convention is present on this device — directly relevant to later delete-safety design (§11, Milestone 5).
-- No book files were present in `documents/` on the tested device at this time; book-format evidence must be gathered from a device with a populated library before finalising the Milestone 3 format rules.
+- **Books are present but nested deeper than the `documents/` root.** `documents/Downloads/Items01/` (MTP handle 4625) holds **58 `.kfx` books**, each a `Title_ASIN.kfx` file paired with a `Title_ASIN.sdr` sidecar folder, plus `.yjf`/`.mf`/`.meta` per-book metadata. Dictionaries (`.azw`) live in `documents/dictionaries/`. This is the primary evidence base for the Milestone 3 inventory/format model — do not assume books sit at the `documents/` root.
 - The storage root also contained `screenshots`, `voice`, `audible`, `system`, and `fonts` directories.
+- The diagnostic `mtp-folder <handle>` command (Kindred `list_folder_children`) is what located the books; note that a libmtp `mtp-files` recursive scan under-reported them, while the Rust `mtp-rs` layer returned the complete folder listing.
 
 Commit (2B + 2C together):
 
