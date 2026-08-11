@@ -51,8 +51,9 @@ attached at a time** — there is no multi-device selection; `open_first()` stay
 
 1. Profile registry + serial correlation — **done** (`profile.rs`; CLI `identify`,
    `profiles`, `profile add`).
-2. Local JSON library (records + reconcile-on-connect) — **next**.
-3. `.mf`/`.yjf` metadata enrichment feeds the library.
+2. Local JSON library (records + reconcile-on-connect) — **done** (`library.rs`; CLI
+   `library`, `library reconcile`, `library add`).
+3. `.mf`/`.yjf` metadata enrichment feeds the library — **next**.
 4. Error abstraction follows the growing app layer.
 5. GUI framework decision (criteria + shortlist) before the app layer.
 6. Kindle Collections — read-only investigation only (see below).

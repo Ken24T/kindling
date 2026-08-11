@@ -890,7 +890,7 @@ Current state (2026-08-12):
 - The repo runs the TCTBP staged branch model (§22); work continues on `development`.
 - The Milestone 3 planning session is complete; the agreed scope is recorded in `PLAN.md` (root).
 - Milestones 3, 4 and 5 are complete — see §9 (inventory model, controlled transfer proof, and safe device-management operations).
-- **Next step:** the local profile registry and device identity slice is complete (§16, `profile.rs`); the JSON local library comes next, then the `.mf`/`.yjf` metadata milestone and error abstraction. The repo is at a stable checkpoint on `development`.
+- **Next step:** the profile registry (§16, `profile.rs`) and the local JSON library (`library.rs`) slices are complete. The `.mf`/`.yjf` metadata milestone is next, then error abstraction. The repo is at a stable checkpoint on `development`.
 
 A good next sequence is:
 
