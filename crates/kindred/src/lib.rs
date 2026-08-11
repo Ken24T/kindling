@@ -1,5 +1,8 @@
+mod inventory;
 mod mtp;
 mod usb;
+
+pub use inventory::{Book, BookFormat, KindleInventory, inventory_device};
 
 pub use mtp::{
     MtpDocumentsListing, MtpObjectSummary, MtpProbe, MtpStorageListing, MtpStorageSummary,

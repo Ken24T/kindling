@@ -48,6 +48,8 @@ pub struct MtpObjectSummary {
     pub is_folder: bool,
     /// Opaque MTP object handle used to address the object in later operations.
     pub handle: u64,
+    /// Size in bytes (0 for folders, or when the device reports none).
+    pub size_bytes: u64,
 }
 
 impl From<mtp_rs::mtp::ObjectInfo> for MtpObjectSummary {
@@ -57,6 +59,7 @@ impl From<mtp_rs::mtp::ObjectInfo> for MtpObjectSummary {
             filename: info.filename,
             is_folder,
             handle: info.handle.0,
+            size_bytes: info.size,
         }
     }
 }

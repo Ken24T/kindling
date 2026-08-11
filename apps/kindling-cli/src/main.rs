@@ -1,6 +1,6 @@
 use futures::executor::block_on;
 use kindred::{
-    discover_kindles, list_documents, list_folder_children, list_storage_roots,
+    discover_kindles, inventory_device, list_documents, list_folder_children, list_storage_roots,
     probe_first_mtp_device,
 };
 
@@ -148,6 +148,41 @@ async fn mtp_folder(handle: u64) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+async fn inventory() -> Result<(), Box<dyn std::error::Error>> {
+    let inventory = inventory_device().await?;
+
+    let Some(inventory) = inventory else {
+        println!("No Kindle inventory found.");
+        return Ok(());
+    };
+
+    println!("Storage: {}", inventory.storage_description);
+    println!("Books:   {}", inventory.books.len());
+    println!();
+
+    for book in &inventory.books {
+        println!("{}", book.title.replace('_', " "));
+        println!(
+            "  {} | {:.2} MB | asin: {}",
+            book.format.label(),
+            book.size_bytes as f64 / 1_000_000.0,
+            book.asin.as_deref().unwrap_or("-"),
+        );
+        println!(
+            "  sidecar: {} | metadata objects: {}",
+            if book.sidecar_handle.is_some() {
+                "yes"
+            } else {
+                "no"
+            },
+            book.metadata_handles.len(),
+        );
+        println!();
+    }
+
+    Ok(())
+}
+
 fn usage() {
     eprintln!("Usage: kindling-cli <command>");
     eprintln!();
@@ -157,6 +192,7 @@ fn usage() {
     eprintln!("  mtp-root        List the root objects of each MTP storage");
     eprintln!("  mtp-documents   List the contents of the root documents folder");
     eprintln!("  mtp-folder <h>  List the contents of a folder by MTP handle");
+    eprintln!("  inventory       List the device library as books");
 }
 
 fn main() {
@@ -178,6 +214,7 @@ fn main() {
             };
             block_on(mtp_folder(handle))
         }
+        Some("inventory") => block_on(inventory()),
         _ => {
             usage();
             return;
