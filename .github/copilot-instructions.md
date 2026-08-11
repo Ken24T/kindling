@@ -352,9 +352,76 @@ Commit:
 
 At this checkpoint `main` was clean and synchronised with `origin/main`.
 
+### Milestone 2B: read-only MTP root enumeration
+
+Completed, tested against the physical Paperwhite, committed.
+
+Proven behaviour from:
+
+```bash
+cargo run -p kindling-cli -- mtp-root
+```
+
+Observed output:
+
+```text
+Storage: Internal Storage
+
+[DIR]  documents
+[DIR]  screenshots
+[FILE] FILE_SYSTEM_ACCESSIBILITY_FLAG
+[DIR]  voice
+[DIR]  system
+[FILE] driveinfo.calibre
+[DIR]  audible
+[FILE] metadata.calibre
+[DIR]  fonts
+```
+
+Key results:
+
+- `documents` is identified as a directory through the Rust MTP layer — the milestone's core proof.
+- The predicted calibre files (`metadata.calibre`, `driveinfo.calibre`) are present at the root; do not depend on them (§12).
+- `FILE_SYSTEM_ACCESSIBILITY_FLAG` is present at the root; semantics not yet investigated — do not treat as a book.
+
+### Milestone 2C: enumerate `documents/`
+
+Completed, tested against the physical Paperwhite, committed.
+
+Proven behaviour from:
+
+```bash
+cargo run -p kindling-cli -- mtp-documents
+```
+
+Observed output:
+
+```text
+Storage:        Internal Storage
+Documents dir:  handle 4541
+
+[DIR]  .cache
+[DIR]  My Clippings.sdr
+[DIR]  dictionaries
+[DIR]  Downloads
+```
+
+Key results:
+
+- The root `documents` folder was located (MTP handle 4541) and its immediate children enumerated.
+- `My Clippings.sdr` confirms the `.sdr` sidecar-folder convention is present on this device — directly relevant to later delete-safety design (§11, Milestone 5).
+- No book files were present in `documents/` on the tested device at this time; book-format evidence must be gathered from a device with a populated library before finalising the Milestone 3 format rules.
+- The storage root also contained `screenshots`, `voice`, `audible`, `system`, and `fonts` directories.
+
+Commit (2B + 2C together):
+
+`a108ecc Add read-only MTP root and documents enumeration`
+
 ---
 
 ## 10. Immediate next milestone
+
+> **Status (2026-08-12):** Milestones 2B and 2C are complete — see §9 for the proven device output. The next milestone is the Kindle inventory model (§11, Milestone 3), to be planned after a product-scope session grounded in the 2B/2C device evidence.
 
 ### Milestone 2B: read-only MTP root enumeration
 
@@ -728,6 +795,13 @@ At the time this file was created:
 - The MTP probe is working on physical hardware.
 - The working direction is to move normal coding into VS Code while keeping infrastructure/architecture decisions deliberate and milestone-based.
 - The **next coding task is Milestone 2B: read-only MTP root enumeration**.
+
+Current state (2026-08-12):
+
+- Milestones 2B and 2C are complete, committed as `a108ecc` on `development`, and published to origin (see §9).
+- Root and `documents/` enumeration are proven on the physical Paperwhite.
+- The repo runs the TCTBP staged branch model (§22); work continues on `development`.
+- **Next step:** the Milestone 3 planning session (product scope for the inventory model), then Milestone 3.
 
 A good next sequence is:
 
