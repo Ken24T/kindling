@@ -40,3 +40,88 @@ pub async fn probe_first_mtp_device() -> Result<MtpProbe, mtp_rs::Error> {
         storages: storage_summaries,
     })
 }
+
+/// Summary of a single MTP object (file or folder), owned by Kindred.
+#[derive(Debug, Clone)]
+pub struct MtpObjectSummary {
+    pub filename: String,
+    pub is_folder: bool,
+    /// Opaque MTP object handle used to address the object in later operations.
+    pub handle: u64,
+}
+
+impl From<mtp_rs::mtp::ObjectInfo> for MtpObjectSummary {
+    fn from(info: mtp_rs::mtp::ObjectInfo) -> Self {
+        let is_folder = info.is_folder();
+        MtpObjectSummary {
+            filename: info.filename,
+            is_folder,
+            handle: info.handle.0,
+        }
+    }
+}
+
+/// Objects directly inside one folder of an MTP storage.
+#[derive(Debug, Clone)]
+pub struct MtpStorageListing {
+    pub description: String,
+    pub objects: Vec<MtpObjectSummary>,
+}
+
+/// Open the first MTP device and enumerate the root of each storage.
+///
+/// `None` as the parent denotes the storage root in the `mtp-rs` API.
+pub async fn list_storage_roots() -> Result<Vec<MtpStorageListing>, mtp_rs::Error> {
+    let device = MtpDevice::open_first().await?;
+
+    let mut listings = Vec::new();
+
+    for storage in device.storages().await? {
+        let info = storage.info();
+        let objects = storage.list_objects(None).await?;
+
+        listings.push(MtpStorageListing {
+            description: info.description.clone(),
+            objects: objects.into_iter().map(MtpObjectSummary::from).collect(),
+        });
+    }
+
+    Ok(listings)
+}
+
+/// Contents of the root `documents` folder of the first storage that has one.
+#[derive(Debug, Clone)]
+pub struct MtpDocumentsListing {
+    pub description: String,
+    /// MTP handle of the `documents` folder itself.
+    pub documents_handle: u64,
+    pub objects: Vec<MtpObjectSummary>,
+}
+
+/// Locate the root `documents` folder on the first MTP device storage that has
+/// one, then enumerate its immediate children.
+pub async fn list_documents() -> Result<Option<MtpDocumentsListing>, mtp_rs::Error> {
+    let device = MtpDevice::open_first().await?;
+
+    for storage in device.storages().await? {
+        let info = storage.info();
+        let root_objects = storage.list_objects(None).await?;
+
+        let Some(documents) = root_objects
+            .into_iter()
+            .find(|object| object.is_folder() && object.filename == "documents")
+        else {
+            continue;
+        };
+
+        let children = storage.list_objects(Some(documents.handle)).await?;
+
+        return Ok(Some(MtpDocumentsListing {
+            description: info.description.clone(),
+            documents_handle: documents.handle.0,
+            objects: children.into_iter().map(MtpObjectSummary::from).collect(),
+        }));
+    }
+
+    Ok(None)
+}

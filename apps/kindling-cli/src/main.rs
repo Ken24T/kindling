@@ -1,5 +1,5 @@
 use futures::executor::block_on;
-use kindred::{discover_kindles, probe_first_mtp_device};
+use kindred::{discover_kindles, list_documents, list_storage_roots, probe_first_mtp_device};
 
 fn masked_serial(serial: &str) -> String {
     let chars: Vec<char> = serial.chars().collect();
@@ -77,18 +77,68 @@ async fn mtp_probe() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+async fn mtp_root() -> Result<(), Box<dyn std::error::Error>> {
+    let listings = list_storage_roots().await?;
+
+    if listings.is_empty() {
+        println!("No MTP storage found.");
+        return Ok(());
+    }
+
+    for listing in listings {
+        println!("Storage: {}", listing.description);
+        println!();
+        for object in listing.objects {
+            if object.is_folder {
+                println!("[DIR]  {}", object.filename);
+            } else {
+                println!("[FILE] {}", object.filename);
+            }
+        }
+        println!();
+    }
+
+    Ok(())
+}
+
+async fn mtp_documents() -> Result<(), Box<dyn std::error::Error>> {
+    let listing = list_documents().await?;
+
+    let Some(listing) = listing else {
+        println!("No 'documents' folder found in any storage root.");
+        return Ok(());
+    };
+
+    println!("Storage:        {}", listing.description);
+    println!("Documents dir:  handle {}", listing.documents_handle);
+    println!();
+    for object in listing.objects {
+        if object.is_folder {
+            println!("[DIR]  {}", object.filename);
+        } else {
+            println!("[FILE] {}", object.filename);
+        }
+    }
+
+    Ok(())
+}
+
 fn usage() {
     eprintln!("Usage: kindling-cli <command>");
     eprintln!();
     eprintln!("Commands:");
-    eprintln!("  devices     List connected supported Kindle devices");
-    eprintln!("  mtp-probe   Open the first MTP device and inspect its storage");
+    eprintln!("  devices         List connected supported Kindle devices");
+    eprintln!("  mtp-probe       Open the first MTP device and inspect its storage");
+    eprintln!("  mtp-root        List the root objects of each MTP storage");
+    eprintln!("  mtp-documents   List the contents of the root documents folder");
 }
 
 fn main() {
     let result = match std::env::args().nth(1).as_deref() {
         Some("devices") => devices(),
         Some("mtp-probe") => block_on(mtp_probe()),
+        Some("mtp-root") => block_on(mtp_root()),
+        Some("mtp-documents") => block_on(mtp_documents()),
         _ => {
             usage();
             return;
