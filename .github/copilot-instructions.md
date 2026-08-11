@@ -485,11 +485,36 @@ Commit:
 
 `81f6b89 Add controlled transfer proof (Milestone 4)`
 
+### Milestone 5: safe device-management operations
+
+Completed, tested against the physical Paperwhite, committed — with explicit approval for the controlled real-book removal (2026-08-12).
+
+Kindred gains safe book-level operations in `manage.rs`:
+
+- `copy_book_from_kindle(book, dest)` — download a book's content to a local path.
+- `add_book_to_kindle(path)` — upload a local file to `documents/` (classic sideload location).
+- `remove_book(book)` — validated, sidecar-aware removal: content file + `.sdr` sidecar folder + associated metadata. Every handle is checked against the device (expected name/kind) before deletion; nothing is deleted on mismatch.
+- `remove_added_object(handle)` — the only handle-based delete; refuses anything whose filename does not begin with `kindling_` (controlled artifacts only).
+
+Proven behaviour (physical device):
+
+- `copy-book <asin> <dir>` — a real book was downloaded (201,255 bytes), filename preserved.
+- `add-book <path>` — a controlled file uploaded to `documents/` and listed back.
+- `remove-book <asin>` — "Moresome 3 Key West" was removed together with its `.sdr` sidecar: inventory 60 → 59, both objects gone from `documents/Downloads/Items01/`, siblings untouched.
+- Guard — `remove-added` on a non-Kindling handle is refused (`access denied`).
+- Restore — the removed book was re-added from its local backup via `add-book`; content is back on the device at `documents/`.
+
+Note: the restored book lives in `documents/` root rather than `Downloads/Items01/`, so the M3 `inventory` command (which scans Items01 + dictionaries) reports 59 while the Kindle's own library scanner re-indexes sideloaded content from `documents/`. A future improvement is to have the inventory scan the whole `documents/` tree.
+
+Commit:
+
+`c0f6ae8 Add safe device-management operations (Milestone 5)`
+
 ---
 
 ## 10. Immediate next milestone
 
-> **Status (2026-08-12):** Milestones 2B, 2C, 3 and 4 are complete — see §9 for the proven device output. Milestone 4's controlled write test was explicitly approved and executed safely. The next milestone is Milestone 5 (safe device-management operations) per §11.
+> **Status (2026-08-12):** Milestones 2B through 5 are complete — see §9 for the proven device output. The remaining roadmap is later product work per §11: the `.mf`/`.yjf` metadata milestone, the local library, error abstraction, device selection for multiple Kindles, and the GUI/async decisions.
 
 ### Milestone 2B: read-only MTP root enumeration
 
@@ -870,8 +895,8 @@ Current state (2026-08-12):
 - Root and `documents/` enumeration are proven on the physical Paperwhite.
 - The repo runs the TCTBP staged branch model (§22); work continues on `development`.
 - The Milestone 3 planning session is complete; the agreed scope is recorded in `PLAN.md` (root).
-- Milestones 3 and 4 are complete — see §9 (inventory model, and the controlled transfer proof with explicit write approval).
-- **Next step:** Milestone 5 (safe device-management operations) per §11, planned before implementation. The `.mf`/`.yjf` metadata question is queued for a later metadata milestone.
+- Milestones 3, 4 and 5 are complete — see §9 (inventory model, controlled transfer proof, and safe device-management operations).
+- **Next step:** later product work per §11/`PLAN.md` — the `.mf`/`.yjf` metadata milestone, the local library, error abstraction, or device selection for multiple Kindles. The repo is at a stable checkpoint on `development`.
 
 A good next sequence is:
 
