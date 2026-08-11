@@ -418,11 +418,47 @@ Commit (2B + 2C together):
 
 `a108ecc Add read-only MTP root and documents enumeration`
 
+### Milestone 3: Kindle inventory model
+
+Completed, tested against the physical Paperwhite, committed.
+
+Proven behaviour from:
+
+```bash
+cargo run -p kindling-cli -- inventory
+```
+
+Result: **60 books inventoried** — 58 `.kfx` books + 2 `.azw` dictionaries. Each book lists title (from filename), format, size, ASIN and sidecar presence.
+
+```text
+Storage: Internal Storage
+Books:   60
+
+The Way of Kings
+  KFX | 4.81 MB | asin: JX7VYKM3IPBSUZSDGADVUXVLCVHECJD2
+  sidecar: yes | metadata objects: 0
+...
+Oxford Dictionary of English
+  AZW | 49.34 MB | asin: -
+  sidecar: no | metadata objects: 0
+```
+
+Key results:
+
+- `Book` model: ASIN key (10-char ASINs and 32-char hex ids both parse), title from filename, format (KFX/AZW), size; groups main file + `.sdr` sidecar + metadata handles.
+- Book content is read from `documents/Downloads/Items01/`; dictionaries from `documents/dictionaries/`.
+- First unit tests in the workspace (filename parsing, format mapping, sidecar/metadata grouping) — 6 passing.
+- **Open question:** `.mf`/`.yjf`/`.meta` metadata objects were reported by libmtp under `Items01` but are NOT visible as direct children through `mtp-rs` `list_objects`. The model supports metadata association (unit-tested), but device-side association is unproven until a metadata milestone investigates.
+
+Commit:
+
+`1b5927e Add Kindle inventory model (Milestone 3)`
+
 ---
 
 ## 10. Immediate next milestone
 
-> **Status (2026-08-12):** Milestones 2B and 2C are complete — see §9 for the proven device output. The next milestone is the Kindle inventory model (§11, Milestone 3), to be planned after a product-scope session grounded in the 2B/2C device evidence.
+> **Status (2026-08-12):** Milestones 2B, 2C and 3 are complete — see §9 for the proven device output. The next milestone is Milestone 4 (controlled transfer proof), which requires explicit write-milestone approval per §12.
 
 ### Milestone 2B: read-only MTP root enumeration
 
@@ -802,8 +838,9 @@ Current state (2026-08-12):
 - Milestones 2B and 2C are complete, committed as `a108ecc` on `development`, and published to origin (see §9).
 - Root and `documents/` enumeration are proven on the physical Paperwhite.
 - The repo runs the TCTBP staged branch model (§22); work continues on `development`.
-- The Milestone 3 planning session is complete; the agreed scope and evidence base are recorded in `PLAN.md` (root).
-- **Next step:** implement Milestone 3 (Kindle inventory model) per `PLAN.md`.
+- The Milestone 3 planning session is complete; the agreed scope is recorded in `PLAN.md` (root).
+- Milestone 3 (Kindle inventory model) is complete — see §9.
+- **Next step:** Milestone 4 (controlled transfer proof), which requires explicit write-milestone approval per §12. The `.mf`/`.yjf` metadata question is queued for a later metadata milestone.
 
 A good next sequence is:
 

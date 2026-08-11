@@ -1,7 +1,8 @@
 # Kindling — Product Scope & Milestone 3 Baseline
 
-Status: agreed 2026-08-12 (planning session). See `.github/copilot-instructions.md` for
-the project context, safety rules and device evidence.
+Status: agreed 2026-08-12 (planning session). Milestone 3 (Kindle inventory model) is
+implemented and verified against the physical Paperwhite on 2026-08-12 — see
+`.github/copilot-instructions.md` §9 for the recorded output.
 
 ## Product definition
 
