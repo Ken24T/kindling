@@ -1,8 +1,8 @@
 # Kindling — Product Scope & Milestone 3 Baseline
 
-Status: agreed 2026-08-12 (planning session). Milestone 3 (Kindle inventory model) is
-implemented and verified against the physical Paperwhite on 2026-08-12 — see
-`.github/copilot-instructions.md` §9 for the recorded output.
+Status: agreed 2026-08-12 (planning session). Milestones 3–5 are implemented and verified
+against the physical Paperwhite (see `.github/copilot-instructions.md` §9). The device
+identity/profile slice is also complete — see “Device identity & local library design”.
 
 ## Product definition
 
@@ -25,10 +25,35 @@ device-independent local library are later milestones.
    Raw MTP objects remain accessible underneath.
 4. **Metadata timing:** display titles come from filenames in M3. Parsing the per-book
    `.mf`/`.meta` metadata files (real titles/authors/covers) is a later milestone.
-5. **Local library:** introduced after on-device inventory, as its own milestone (implies
-   a storage decision: files vs database).
+5. **Local library:** a **JSON-based** local library (per-user `library.json` keyed by
+   ASIN) for offline management and cross-machine sync — see “Device identity & local
+   library design” below. Chosen over a database for v1 (cheap, reversible, shareable).
 6. **Windows CI:** a Windows runner is added to CI now to catch cross-platform compile
    issues; physical Windows hardware testing stays deferred.
+
+## Device identity & local library design (resolved 2026-08-12)
+
+Two users, two machines, two Kindles: Ken on Linux, Deb on Windows. Only **one device is
+attached at a time** — there is no multi-device selection; `open_first()` stays correct.
+
+- **Device identity:** the stable USB serial labels the attached Kindle. A local JSON
+  profile store (`profiles.json`) maps serial → friendly name (“Ken's Kindle”, “Deb's
+  Kindle”). Each machine keeps its own store; the JSON file can be exchanged between
+  machines so a cross-over plug-in is recognised instead of shown as unknown.
+- **Local library:** a per-user JSON library keyed by ASIN supports offline management
+  (add/remove/organise without the device) and reconciliation on connect. The device
+  remains the source of truth for what is physically on it; the library is the index +
+  offline view.
+- **Data files:** `profiles.json` (device identity) and `library.json` (book records) are
+  local user data, never committed to the public repo; serials are masked in logs/UI.
+
+### Next work slices
+
+1. Profile registry + serial correlation — **done** (`profile.rs`; CLI `identify`,
+   `profiles`, `profile add`).
+2. Local JSON library (records + reconcile-on-connect).
+3. `.mf`/`.yjf` metadata enrichment feeds the library.
+4. Error abstraction follows the growing app layer.
 
 ## Device evidence base (from Milestones 2B/2C, 2026-08-12)
 

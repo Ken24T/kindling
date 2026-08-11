@@ -780,24 +780,18 @@ The diagnostic CLI is expected to remain useful even after a GUI exists, particu
 
 ---
 
-## 16. Device selection: current limitation and future requirement
+## 16. Device identity and profiles (resolved 2026-08-12)
 
-Current MTP probe code uses `MtpDevice::open_first()`.
+Kindling serves two users, each on their own machine with their own Kindle: Ken on Linux, Deb on Windows. Only **one device is ever attached at a time**, so `MtpDevice::open_first()` remains the correct transport approach — there is no multi-device selection requirement.
 
-This was acceptable for proving the first physical device, but it is **not a sufficient final design**, because the intended use case includes multiple Kindles.
+What IS required is **device identity labelling**: when a Kindle is attached, Kindling must know whose it is, because a device might occasionally be plugged into the other person's machine. The stable USB serial (Milestone 1) is the persistent key; a **local JSON profile store** (`profiles.json`) maps serial → friendly name ("Ken's Kindle", "Deb's Kindle").
 
-Future work must connect USB identity to the corresponding MTP device/session so Kindling can reliably manage the selected physical Kindle rather than simply 'the first MTP device'.
+- Each machine keeps its own local profile store; the JSON file can be exchanged between machines so a cross-over plug-in is recognised rather than shown as unknown.
+- The friendly name is a local profile mapping — not assumed to be provided by MTP.
+- On an unprofiled device, Kindling reports "Unknown Kindle" and offers `profile add <name>`.
+- Serials are stored locally only and masked in logs/UI (§18).
 
-Do not prematurely solve this during unrelated milestones, but keep the limitation visible.
-
-Likely future user experience:
-
-```text
-Ken's Kindle
-Deb's Kindle
-```
-
-The friendly names should be local Kindling profile names mapped to persistent device identity, not assumed to be provided by MTP.
+The profile store and the planned JSON local library (see PLAN.md) are the natural home for this identity data.
 
 ---
 
@@ -896,7 +890,7 @@ Current state (2026-08-12):
 - The repo runs the TCTBP staged branch model (§22); work continues on `development`.
 - The Milestone 3 planning session is complete; the agreed scope is recorded in `PLAN.md` (root).
 - Milestones 3, 4 and 5 are complete — see §9 (inventory model, controlled transfer proof, and safe device-management operations).
-- **Next step:** later product work per §11/`PLAN.md` — the `.mf`/`.yjf` metadata milestone, the local library, error abstraction, or device selection for multiple Kindles. The repo is at a stable checkpoint on `development`.
+- **Next step:** the local profile registry and device identity slice is complete (§16, `profile.rs`); the JSON local library comes next, then the `.mf`/`.yjf` metadata milestone and error abstraction. The repo is at a stable checkpoint on `development`.
 
 A good next sequence is:
 
