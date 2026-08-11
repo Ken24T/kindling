@@ -5,8 +5,9 @@
 //! observed on the physical Paperwhite (see PLAN.md and the project
 //! instructions §9).
 
-use crate::mtp::{MtpObjectSummary, list_documents, list_folder_children};
+use crate::mtp::MtpObjectSummary;
 
+use mtp_rs::mtp::{MtpDevice, Storage};
 use serde::{Deserialize, Serialize};
 
 /// Book content formats recognised from device evidence.
@@ -65,30 +66,47 @@ pub struct KindleInventory {
 ///
 /// Books are read from `documents/` (root sideloads), `documents/Downloads/Items01/`
 /// and `documents/dictionaries/`. Read-only; never modifies the device.
+///
+/// One MTP session is opened for the whole walk. For every book the contents
+/// of its `.sdr` sidecar folder are inspected so the real metadata handles
+/// (`.mf`/`.yjf`/`.meta`) are associated with the book.
 pub async fn inventory_device() -> Result<Option<KindleInventory>, mtp_rs::Error> {
-    let Some(documents) = list_documents().await? else {
+    let device = MtpDevice::open_first().await?;
+    let mut storages = device.storages().await?;
+    let Some(storage) = storages.pop() else {
         return Ok(None);
     };
+
+    let root = to_summaries(storage.list_objects(None).await?);
+    let Some(documents) = find_folder(&root, "documents") else {
+        return Ok(None);
+    };
+    let documents_children = to_summaries(
+        storage
+            .list_objects(Some(mtp_rs::mtp::ObjectHandle(documents.handle)))
+            .await?,
+    );
 
     let mut books = Vec::new();
 
     // Books sideloaded directly in the documents/ root.
-    books.extend(books_from_folder(&documents.objects));
+    let root_books = books_from_folder(&documents_children);
+    books.extend(enrich_sidecar_metadata(&storage, root_books).await);
 
     // Book content area: documents/Downloads/Items01/
-    if let Some(downloads) = find_folder(&documents.objects, "Downloads")
-        && let Some(items) = list_folder_children(downloads.handle).await?
-        && let Some(items01) = find_folder(&items.objects, "Items01")
-        && let Some(content) = list_folder_children(items01.handle).await?
+    if let Some(downloads) = find_folder(&documents_children, "Downloads")
+        && let items = list_children(&storage, downloads.handle).await?
+        && let Some(items01) = find_folder(&items, "Items01")
     {
-        books.extend(books_from_folder(&content.objects));
+        let content = list_children(&storage, items01.handle).await?;
+        let content_books = books_from_folder(&content);
+        books.extend(enrich_sidecar_metadata(&storage, content_books).await);
     }
 
     // Dictionaries: documents/dictionaries/ (`.azw` files)
-    if let Some(dictionaries) = find_folder(&documents.objects, "dictionaries")
-        && let Some(content) = list_folder_children(dictionaries.handle).await?
-    {
-        for object in content.objects.iter().filter(|object| !object.is_folder) {
+    if let Some(dictionaries) = find_folder(&documents_children, "dictionaries") {
+        let content = list_children(&storage, dictionaries.handle).await?;
+        for object in content.iter().filter(|object| !object.is_folder) {
             let Some(format) = extension(&object.filename).and_then(BookFormat::from_extension)
             else {
                 continue;
@@ -107,9 +125,59 @@ pub async fn inventory_device() -> Result<Option<KindleInventory>, mtp_rs::Error
     }
 
     Ok(Some(KindleInventory {
-        storage_description: documents.description,
+        storage_description: storage.info().description.clone(),
         books,
     }))
+}
+
+/// List a folder's children as Kindred-owned summaries.
+async fn list_children(
+    storage: &Storage,
+    parent: u64,
+) -> Result<Vec<MtpObjectSummary>, mtp_rs::Error> {
+    storage
+        .list_objects(Some(mtp_rs::mtp::ObjectHandle(parent)))
+        .await
+        .map(to_summaries)
+}
+
+/// Convert raw MTP object info into Kindred-owned summaries.
+fn to_summaries(objects: Vec<mtp_rs::mtp::ObjectInfo>) -> Vec<MtpObjectSummary> {
+    objects.into_iter().map(MtpObjectSummary::from).collect()
+}
+
+/// Fill each book's `metadata_handles` from its `.sdr` sidecar folder.
+///
+/// The `.mf`/`.yjf`/`.meta` files observed on the physical device live inside
+/// the sidecar folder rather than beside the content file, so the handles are
+/// collected by descending into each sidecar once.
+async fn enrich_sidecar_metadata(storage: &Storage, mut books: Vec<Book>) -> Vec<Book> {
+    for book in &mut books {
+        let Some(sidecar_handle) = book.sidecar_handle else {
+            continue;
+        };
+
+        let Ok(children) = storage
+            .list_objects(Some(mtp_rs::mtp::ObjectHandle(sidecar_handle)))
+            .await
+        else {
+            continue;
+        };
+
+        book.metadata_handles = children
+            .iter()
+            .filter(|object| !object.is_folder() && is_metadata_filename(&object.filename))
+            .map(|object| object.handle.0)
+            .collect();
+    }
+    books
+}
+
+/// True for the per-book metadata extensions observed on the device.
+fn is_metadata_filename(filename: &str) -> bool {
+    extension(filename)
+        .map(|ext| matches!(ext.to_ascii_lowercase().as_str(), "mf" | "yjf" | "meta"))
+        .unwrap_or(false)
 }
 
 fn find_folder<'a>(objects: &'a [MtpObjectSummary], name: &str) -> Option<&'a MtpObjectSummary> {
