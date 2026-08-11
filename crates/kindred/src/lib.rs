@@ -1,11 +1,14 @@
 mod inventory;
+mod library;
 mod manage;
 mod mtp;
 mod profile;
 mod transfer;
 mod usb;
 
-pub use inventory::{Book, BookFormat, KindleInventory, inventory_device};
+pub use inventory::{Book, BookFormat, KindleInventory, inventory_device, parse_book_filename};
+
+pub use library::{BookStatus, LibraryError, LibraryRecord, LocalLibrary};
 
 pub use manage::{add_book_to_kindle, copy_book_from_kindle, remove_added_object, remove_book};
 

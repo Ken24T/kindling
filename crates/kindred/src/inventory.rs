@@ -7,10 +7,14 @@
 
 use crate::mtp::{MtpObjectSummary, list_documents, list_folder_children};
 
+use serde::{Deserialize, Serialize};
+
 /// Book content formats recognised from device evidence.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BookFormat {
+    #[serde(rename = "KFX")]
     Kfx,
+    #[serde(rename = "AZW")]
     Azw,
 }
 
@@ -183,6 +187,15 @@ fn split_identity(stem: &str) -> (String, Option<String>) {
         Some((title, id)) if is_identifier(id) => (title.to_owned(), Some(id.to_owned())),
         _ => (stem.to_owned(), None),
     }
+}
+
+/// Parse a `Title_ASIN.ext` filename into (title, asin, format).
+///
+/// Returns `None` when the extension is not a recognised book format.
+pub fn parse_book_filename(filename: &str) -> Option<(String, Option<String>, BookFormat)> {
+    let format = BookFormat::from_extension(extension(filename)?)?;
+    let (title, asin) = split_identity(strip_extension(filename));
+    Some((title, asin, format))
 }
 
 /// True when `token` looks like a device identifier: uppercase letters and

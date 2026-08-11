@@ -20,6 +20,9 @@ fn usage() {
     eprintln!("  identify           Identify the attached Kindle (serial + profile)");
     eprintln!("  profiles           List local device profiles");
     eprintln!("  profile add <n>    Profile the attached Kindle with a friendly name");
+    eprintln!("  library            List the local library");
+    eprintln!("  library reconcile  Reconcile the library against the attached Kindle");
+    eprintln!("  library add <p>    Add a local book file to the local library");
 }
 
 fn main() {
@@ -88,6 +91,25 @@ fn main() {
                 (Some("add"), Some(name)) => block_on(commands::add_profile(&name)),
                 _ => {
                     eprintln!("Usage: kindling-cli profile add <name>");
+                    std::process::exit(1);
+                }
+            }
+        }
+        Some("library") => {
+            let mut args = std::env::args().skip(2);
+            match args.next().as_deref() {
+                None => block_on(commands::list_library()),
+                Some("reconcile") => block_on(commands::reconcile_library()),
+                Some("add") => match args.next() {
+                    Some(path) => block_on(commands::add_library(&path)),
+                    None => {
+                        eprintln!("Usage: kindling-cli library add <path>");
+                        std::process::exit(1);
+                    }
+                },
+                Some(other) => {
+                    eprintln!("Unknown library subcommand '{other}'.");
+                    eprintln!("Usage: kindling-cli library [reconcile|add <path>]");
                     std::process::exit(1);
                 }
             }
