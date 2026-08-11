@@ -228,6 +228,8 @@ dependencies = [
 name = "kindred"
 version = "0.1.0"
 dependencies = [
+ "bytes",
+ "futures-util",
  "mtp-rs",
  "rusb",
 ]

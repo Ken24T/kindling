@@ -1,7 +1,7 @@
 use futures::executor::block_on;
 use kindred::{
     discover_kindles, inventory_device, list_documents, list_folder_children, list_storage_roots,
-    probe_first_mtp_device,
+    probe_first_mtp_device, run_controlled_transfer_test,
 };
 
 fn masked_serial(serial: &str) -> String {
@@ -183,6 +183,30 @@ async fn inventory() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+async fn mtp_write_test() -> Result<(), Box<dyn std::error::Error>> {
+    let result = run_controlled_transfer_test().await?;
+
+    println!("Controlled transfer test:");
+    println!("  folder:     {}", result.folder_name);
+    println!(
+        "  uploaded:   {} ({} bytes)",
+        result.uploaded_file, result.uploaded_bytes
+    );
+    println!(
+        "  readback:   {}",
+        if result.verified_readback {
+            "verified"
+        } else {
+            "MISMATCH"
+        }
+    );
+    println!(
+        "  cleaned up: {}",
+        if result.cleaned_up { "yes" } else { "no" }
+    );
+    Ok(())
+}
+
 fn usage() {
     eprintln!("Usage: kindling-cli <command>");
     eprintln!();
@@ -193,6 +217,7 @@ fn usage() {
     eprintln!("  mtp-documents   List the contents of the root documents folder");
     eprintln!("  mtp-folder <h>  List the contents of a folder by MTP handle");
     eprintln!("  inventory       List the device library as books");
+    eprintln!("  mtp-write-test  Run the controlled upload/readback/cleanup test");
 }
 
 fn main() {
@@ -215,6 +240,7 @@ fn main() {
             block_on(mtp_folder(handle))
         }
         Some("inventory") => block_on(inventory()),
+        Some("mtp-write-test") => block_on(mtp_write_test()),
         _ => {
             usage();
             return;

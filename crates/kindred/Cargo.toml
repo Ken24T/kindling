@@ -6,3 +6,5 @@ edition = "2024"
 [dependencies]
 mtp-rs = "0.30.0"
 rusb = "0.9.4"
+bytes = "1"
+futures-util = "0.3"
