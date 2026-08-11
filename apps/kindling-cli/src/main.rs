@@ -1,7 +1,10 @@
+use std::path::Path;
+
 use futures::executor::block_on;
 use kindred::{
-    discover_kindles, inventory_device, list_documents, list_folder_children, list_storage_roots,
-    probe_first_mtp_device, run_controlled_transfer_test,
+    Book, KindleInventory, add_book_to_kindle, copy_book_from_kindle, discover_kindles,
+    inventory_device, list_documents, list_folder_children, list_storage_roots,
+    probe_first_mtp_device, remove_added_object, remove_book, run_controlled_transfer_test,
 };
 
 fn masked_serial(serial: &str) -> String {
@@ -207,6 +210,73 @@ async fn mtp_write_test() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn find_book<'a>(inventory: &'a KindleInventory, asin: &str) -> Option<&'a Book> {
+    inventory
+        .books
+        .iter()
+        .find(|book| book.asin.as_deref() == Some(asin))
+}
+
+async fn copy_book(asin: &str, dest_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let Some(inventory) = inventory_device().await? else {
+        eprintln!("No Kindle inventory found.");
+        std::process::exit(1);
+    };
+    let Some(book) = find_book(&inventory, asin) else {
+        eprintln!("No book with ASIN {asin} in the inventory.");
+        std::process::exit(1);
+    };
+    let dest = copy_book_from_kindle(book, Path::new(dest_dir)).await?;
+    println!(
+        "Copied '{}' to {}",
+        book.title.replace('_', " "),
+        dest.display()
+    );
+    Ok(())
+}
+
+async fn add_book(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let handle = add_book_to_kindle(Path::new(path)).await?;
+    println!("Added {path} to the Kindle documents folder (object handle {handle}).");
+    Ok(())
+}
+
+async fn remove_book_cmd(asin: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let Some(inventory) = inventory_device().await? else {
+        eprintln!("No Kindle inventory found.");
+        std::process::exit(1);
+    };
+    let Some(book) = find_book(&inventory, asin) else {
+        eprintln!("No book with ASIN {asin} in the inventory.");
+        std::process::exit(1);
+    };
+    println!("Removing from Kindle:");
+    println!("  title:    {}", book.title.replace('_', " "));
+    println!(
+        "  format:   {} | {:.2} MB",
+        book.format.label(),
+        book.size_bytes as f64 / 1_000_000.0
+    );
+    println!(
+        "  sidecar:  {}",
+        if book.sidecar_handle.is_some() {
+            "yes"
+        } else {
+            "no"
+        }
+    );
+    println!("  metadata: {} objects", book.metadata_handles.len());
+    remove_book(book).await?;
+    println!("Removed.");
+    Ok(())
+}
+
+async fn remove_added(handle: u64) -> Result<(), Box<dyn std::error::Error>> {
+    remove_added_object(handle).await?;
+    println!("Removed Kindling-controlled object {handle}.");
+    Ok(())
+}
+
 fn usage() {
     eprintln!("Usage: kindling-cli <command>");
     eprintln!();
@@ -218,6 +288,10 @@ fn usage() {
     eprintln!("  mtp-folder <h>  List the contents of a folder by MTP handle");
     eprintln!("  inventory       List the device library as books");
     eprintln!("  mtp-write-test  Run the controlled upload/readback/cleanup test");
+    eprintln!("  copy-book <a> <d>  Copy a book (by ASIN) to a local directory");
+    eprintln!("  add-book <path>    Copy a local file to the Kindle documents folder");
+    eprintln!("  remove-book <asin> Remove a book (content + sidecar) by ASIN");
+    eprintln!("  remove-added <h>   Remove a Kindling-controlled object by handle");
 }
 
 fn main() {
@@ -241,6 +315,43 @@ fn main() {
         }
         Some("inventory") => block_on(inventory()),
         Some("mtp-write-test") => block_on(mtp_write_test()),
+        Some("copy-book") => {
+            let mut args = std::env::args().skip(2);
+            match (args.next(), args.next()) {
+                (Some(asin), Some(dest)) => block_on(copy_book(&asin, &dest)),
+                _ => {
+                    eprintln!("Usage: kindling-cli copy-book <asin> <dest-dir>");
+                    std::process::exit(1);
+                }
+            }
+        }
+        Some("add-book") => match std::env::args().nth(2) {
+            Some(path) => block_on(add_book(&path)),
+            None => {
+                eprintln!("Usage: kindling-cli add-book <path>");
+                std::process::exit(1);
+            }
+        },
+        Some("remove-book") => match std::env::args().nth(2) {
+            Some(asin) => block_on(remove_book_cmd(&asin)),
+            None => {
+                eprintln!("Usage: kindling-cli remove-book <asin>");
+                std::process::exit(1);
+            }
+        },
+        Some("remove-added") => {
+            let handle = match std::env::args()
+                .nth(2)
+                .and_then(|arg| arg.parse::<u64>().ok())
+            {
+                Some(handle) => handle,
+                None => {
+                    eprintln!("Usage: kindling-cli remove-added <handle>");
+                    std::process::exit(1);
+                }
+            };
+            block_on(remove_added(handle))
+        }
         _ => {
             usage();
             return;

@@ -1,9 +1,12 @@
 mod inventory;
+mod manage;
 mod mtp;
 mod transfer;
 mod usb;
 
 pub use inventory::{Book, BookFormat, KindleInventory, inventory_device};
+
+pub use manage::{add_book_to_kindle, copy_book_from_kindle, remove_added_object, remove_book};
 
 pub use mtp::{
     MtpDocumentsListing, MtpObjectSummary, MtpProbe, MtpStorageListing, MtpStorageSummary,
