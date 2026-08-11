@@ -643,6 +643,7 @@ Existing commits in order:
 1. `94f030d Initialise Kindling Rust workspace`
 2. `a3377d4 Add Paperwhite USB device discovery`
 3. `c8b77a1 Add read-only Paperwhite MTP probing`
+4. `f49a6f8 Add Copilot project instructions and infrastructure handover`
 
 When assisting inside VS Code:
 
@@ -679,7 +680,7 @@ Do not replace proven working infrastructure with another stack without a concre
 
 At the time this file was created:
 
-- `main` contains the three commits listed above.
+- `main` contains the four commits listed above.
 - USB discovery is working on physical hardware.
 - The MTP probe is working on physical hardware.
 - The working direction is to move normal coding into VS Code while keeping infrastructure/architecture decisions deliberate and milestone-based.
