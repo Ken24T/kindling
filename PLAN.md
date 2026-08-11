@@ -23,8 +23,9 @@ device-independent local library are later milestones.
 3. **Book aggregation:** each book is modelled as one `Book` object that groups its main
    content file plus associated sidecars (`.sdr` folder, `.mf`/`.meta`/`.yjf` metadata).
    Raw MTP objects remain accessible underneath.
-4. **Metadata timing:** display titles come from filenames in M3. Parsing the per-book
-   `.mf`/`.meta` metadata files (real titles/authors/covers) is a later milestone.
+4. **Metadata timing:** display titles come from filenames. The per-book `.mf`/`.meta`
+   files were investigated (Milestone 6) and carry **delivery/caching metadata only** —
+   no real titles/authors/covers on this firmware — so filenames remain the title source.
 5. **Local library:** a **JSON-based** local library (per-user `library.json` keyed by
    ASIN) for offline management and cross-machine sync — see “Device identity & local
    library design” below. Chosen over a database for v1 (cheap, reversible, shareable).
@@ -53,7 +54,10 @@ attached at a time** — there is no multi-device selection; `open_first()` stay
    `profiles`, `profile add`).
 2. Local JSON library (records + reconcile-on-connect) — **done** (`library.rs`; CLI
    `library`, `library reconcile`, `library add`).
-3. `.mf`/`.yjf` metadata enrichment feeds the library — **next**.
+3. `.mf`/`.yjf` metadata investigation — **done** (Milestone 6). Conclusion: the per-book
+   device files are delivery/caching data (`.mf` JSON delivery metadata, `.meta` download
+   cache, `.yjf` whisperstore marker); no titles/authors/covers. Sidecar metadata-handle
+   association is now wired into the inventory.
 4. Error abstraction follows the growing app layer.
 5. GUI framework decision (criteria + shortlist) before the app layer.
 6. Kindle Collections — read-only investigation only (see below).
@@ -68,7 +72,9 @@ Finder:
   row is one aggregated `Book` (never the underlying `.kfx`/`.sdr`/`.mf` objects), so
   storage internals stay hidden and book-group integrity is preserved.
 - **Right pane / preview:** metadata panel for the selected book (title, author, format,
-  size, ASIN, cover) — this is where `.mf`/`.yjf` enrichment pays off.
+  size, ASIN, cover). Note: Milestone 6 showed the per-book device files do not carry
+  titles/authors/covers, so the panel shows filename-derived title + device facts; covers
+  would need a separate thumbnail-cache investigation.
 - **View modes:** covers (default), list, and details/sortable-table — the Explorer
   trio mapped to books.
 - **Transfers:** drag-and-drop between panes (local→Kindle = `add_book_to_kindle`,
@@ -105,8 +111,10 @@ this as potentially difficult/unreliable over USB/MTP.
   `audible`, plus calibre files (`metadata.calibre`, `driveinfo.calibre`) and
   `FILE_SYSTEM_ACCESSIBILITY_FLAG`.
 - Books live in `documents/Downloads/Items01/`: 58 `.kfx` books, each a `Title_ASIN.kfx`
-  file paired with a `Title_ASIN.sdr` sidecar folder, plus `.yjf`/`.mf`/`.meta` per-book
-  metadata.
+  file paired with a `Title_ASIN.sdr` sidecar folder. The `.yjf`/`.mf`/`.meta` per-book
+  metadata files live **inside each `.sdr` sidecar folder** (Milestone 6), not beside the
+  content file; they are JSON delivery metadata / a download cache / a whisperstore
+  marker — not titles or covers.
 - Dictionaries (`.azw`) live in `documents/dictionaries/`.
 - `My Clippings.sdr` confirms the `.sdr` sidecar convention at the documents root.
 - Send-to-Kindle PDFs are converted to `.kfx` on the device.

@@ -448,7 +448,7 @@ Key results:
 - `Book` model: ASIN key (10-char ASINs and 32-char hex ids both parse), title from filename, format (KFX/AZW), size; groups main file + `.sdr` sidecar + metadata handles.
 - Book content is read from `documents/Downloads/Items01/`; dictionaries from `documents/dictionaries/`.
 - First unit tests in the workspace (filename parsing, format mapping, sidecar/metadata grouping) — 6 passing.
-- **Open question:** `.mf`/`.yjf`/`.meta` metadata objects were reported by libmtp under `Items01` but are NOT visible as direct children through `mtp-rs` `list_objects`. The model supports metadata association (unit-tested), but device-side association is unproven until a metadata milestone investigates.
+- **Open question:** `.mf`/`.yjf`/`.meta` metadata objects were reported by libmtp under `Items01` but are NOT visible as direct children through `mtp-rs` `list_objects`. The model supports metadata association (unit-tested), but device-side association is unproven until a metadata milestone investigates. **Resolved by Milestone 6:** the metadata files live inside each `.sdr` sidecar folder — the mtp-rs listing was correct, libmtp misattributed the parents.
 
 Commit:
 
@@ -510,11 +510,52 @@ Commit:
 
 `c0f6ae8 Add safe device-management operations (Milestone 5)`
 
+### Milestone 6: sidecar metadata investigation
+
+Completed, tested against the physical Paperwhite, committed.
+
+Goal: determine whether the per-book `.mf`/`.yjf`/`.meta` files expose real titles/authors/covers that could enrich the local library.
+
+Findings (inspected The Way of Kings sidecar, handle 4987):
+
+- **The metadata files live inside each `.sdr` sidecar folder**, not beside the content file in `Items01/`. This resolves the M3 open question above: the `mtp-rs` listing was correct all along, and libmtp's `mtp-files` output misattributed the parents.
+- `<ASIN>.mf` — JSON **delivery metadata** (content id, `kindle.pdoc` type, Amazon delivery endpoints). No title/author.
+- `AssetDownloadMetadata.meta` — JSON download cache (ETags, Last-Modified, Last-Downloaded). No title/author.
+- `<Title_ASIN><hash>.yjf` — 113-byte binary `whisperstore.migration.status` marker. No title/author.
+- `assets/` — empty on the tested book; covers are **not** per-book in the sidecar.
+- `data/` — pagination cache only.
+
+Conclusion: **the per-book device files carry delivery/caching data, not user-facing metadata.** Real titles/authors are not available from these files on this firmware; display titles remain from filenames (M3 decision 4). Covers were not found in sidecars (a device-level thumbnail cache exists elsewhere; not per-book).
+
+Implementable outcome: `inventory_device` now walks `documents/` in a single MTP session and descends into every `.sdr` sidecar to associate the real metadata handles (`.mf`/`.yjf`/`.meta`) with each book — making `remove_book`'s validated metadata deletion meaningful on real handles.
+
+Proven behaviour from:
+
+```bash
+cargo run -p kindling-cli -- inventory
+```
+
+```text
+Storage: Internal Storage
+Books:   60
+
+Rhythm of War
+  KFX | 5.94 MB | asin: HXEBCTKSYKRSHFCDOGPTPR3UOKBPKXQ3
+  sidecar: yes | metadata objects: 3
+```
+
+- 57 `.sdr`-paired books report `metadata objects: 3`; the 3 without (2 dictionaries + 1 restored no-sidecar sideload) report 0. 60 total unchanged.
+- All gates green (fmt/check/clippy/test, 17 tests).
+
+Commit:
+
+`1b3cd0f Associate sidecar metadata handles in device inventory`
+
 ---
 
 ## 10. Immediate next milestone
 
-> **Status (2026-08-12):** Milestones 2B through 5 are complete — see §9 for the proven device output. The remaining roadmap is later product work per §11: the `.mf`/`.yjf` metadata milestone, the local library, error abstraction, device selection for multiple Kindles, and the GUI/async decisions.
+> **Status (2026-08-12):** Milestones 2B through 6 are complete — see §9 for the proven device output. The remaining roadmap is later product work per §11: the local library, error abstraction, device selection for multiple Kindles, and the GUI/async decisions. The `.mf`/`.yjf` metadata milestone concluded that the per-book device files carry only delivery/caching data (no titles/authors/covers); sidecar metadata-handle association is now real.
 
 ### Milestone 2B: read-only MTP root enumeration
 
@@ -890,7 +931,7 @@ Current state (2026-08-12):
 - The repo runs the TCTBP staged branch model (§22); work continues on `development`.
 - The Milestone 3 planning session is complete; the agreed scope is recorded in `PLAN.md` (root).
 - Milestones 3, 4 and 5 are complete — see §9 (inventory model, controlled transfer proof, and safe device-management operations).
-- **Next step:** the profile registry (§16, `profile.rs`) and the local JSON library (`library.rs`) slices are complete. The `.mf`/`.yjf` metadata milestone is next, then error abstraction. The repo is at a stable checkpoint on `development`.
+- **Next step:** the profile registry (§16, `profile.rs`) and the local JSON library (`library.rs`) slices are complete. The `.mf`/`.yjf` metadata milestone (Milestone 6, §9) is complete — it concluded the device files carry delivery metadata only and wired real sidecar metadata-handle association into the inventory. Error abstraction is next, then the GUI framework decision. The repo is at a stable checkpoint on `development`.
 
 A good next sequence is:
 
