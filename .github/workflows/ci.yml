@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - development
+      - staging
+      - main
+      - "feature/**"
+      - "chore/**"
+      - "slice/**"
+  workflow_dispatch:
+
+jobs:
+  cargo:
+    name: Cargo gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        run: cargo fmt --check
+
+      - name: Lint
+        run: cargo clippy --workspace --all-targets
+
+      - name: Test
+        run: cargo test
+
+      - name: Build
+        run: cargo build

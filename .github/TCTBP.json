@@ -111,7 +111,7 @@
   "profile": {
     "runtimeCwd": ".",
     "commands": {
-      "format": "cargo fmt",
+      "format": "cargo fmt --check",
       "test": "cargo test",
       "lint": "cargo clippy --workspace --all-targets",
       "build": "cargo build",
@@ -119,11 +119,12 @@
     },
     "verification": {
       "blockingCommands": [
+        "format",
         "test",
         "lint",
         "build"
       ],
-      "comment": "Blocking verification for promote, deploy, and release workflows uses test (cargo test), lint (cargo clippy --workspace --all-targets), and build (cargo build)."
+      "comment": "Blocking verification for promote, deploy, and release workflows uses format (cargo fmt --check), test (cargo test), lint (cargo clippy --workspace --all-targets), and build (cargo build)."
     },
     "qualityGates": {
       "requireZeroProblems": true,

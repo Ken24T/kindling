@@ -720,6 +720,11 @@ This repository has been reconciled with the TCTBP workflow system from the TCTB
 - `.github/TCTBP Cheatsheet.md` — operator quick reference.
 - `scripts/tctbp-run-*.js` — deterministic workflow runners (plain Node, no dependencies).
 
+### CI (GitHub Actions)
+
+- `.github/workflows/ci.yml` — runs `cargo fmt --check`, `cargo clippy --workspace --all-targets`, `cargo test`, and `cargo build` on pushes to `development`, `staging`, `main`, and `feature/`/`chore/`/`slice/` branches (and via `workflow_dispatch`).
+- `.github/workflows/release.yml` — on `v*` tags, verifies the tag matches `[workspace.package] version`, then runs tests and a release build.
+
 ### TCTBP triggers handled by the TCTBP agent
 
 `checkpoint`, `publish`, `promote staging`, `promote production`, `ship`, `deploy dev/staging/prod` (not configured yet — desktop distribution pending), `handover`, `handover local`, `resume`, `orient`, `status`, `abort`, `gate test/lint/build`, `rollback`, `version status`.
@@ -731,7 +736,8 @@ When these phrases are used, follow the TCTBP agent workflow rather than impleme
 - `gate test` → `cargo test`
 - `gate lint` → `cargo clippy --workspace --all-targets`
 - `gate build` → `cargo build`
-- `format` → `cargo fmt`
+- `gate format` → `cargo fmt --check`
+- `format` → `cargo fmt` (apply, not check)
 
 ### Versioning
 
@@ -740,7 +746,7 @@ When these phrases are used, follow the TCTBP agent workflow rather than impleme
 
 ### Handover continuation
 
-`handover` / `handover local` compose a continuation file under `.tctbp/continuation/` so sessions can resume across machines with `orient` or `resume`.
+`handover` / `handover local` compose a continuation file under `.tctbp/continuation/` so sessions can resume across machines with `orient` or `resume`. Superseded continuation files are moved to `.tctbp/continuation/archive/` (see its README) to keep the directory current.
 
 ### Notes
 
