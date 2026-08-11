@@ -802,7 +802,8 @@ Current state (2026-08-12):
 - Milestones 2B and 2C are complete, committed as `a108ecc` on `development`, and published to origin (see §9).
 - Root and `documents/` enumeration are proven on the physical Paperwhite.
 - The repo runs the TCTBP staged branch model (§22); work continues on `development`.
-- **Next step:** the Milestone 3 planning session (product scope for the inventory model), then Milestone 3.
+- The Milestone 3 planning session is complete; the agreed scope and evidence base are recorded in `PLAN.md` (root).
+- **Next step:** implement Milestone 3 (Kindle inventory model) per `PLAN.md`.
 
 A good next sequence is:
 

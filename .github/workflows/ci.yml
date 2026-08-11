@@ -38,3 +38,30 @@ jobs:
 
       - name: Build
         run: cargo build
+
+  cargo-windows:
+    name: Cargo gates (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        run: cargo fmt --check
+
+      - name: Lint
+        run: cargo clippy --workspace --all-targets
+
+      - name: Test
+        run: cargo test
+
+      - name: Build
+        run: cargo build
