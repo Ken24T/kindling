@@ -554,6 +554,49 @@ cargo clippy --workspace --all-targets
 
 Do not claim an operation works on real hardware until it has actually been run against the physical Paperwhite and its output has been observed.
 
+### Modularity rules (read first)
+
+AI agents tend to accrete code into existing files. Resist that. These limits mirror `.github/TCTBP.json` → `developmentPolicy` (the machine-readable source of truth):
+
+- **250 lines:** soft ceiling. When a file approaches this, ask whether the new code belongs in a new module.
+- **400 lines:** warning threshold. Files above this require a comment at the top justifying why they haven't been split.
+- **600 lines:** hard split. Files at or above this MUST be split before the next checkpoint. No exceptions.
+- **Functions:** keep under 40 lines. Prefer pure functions; side effects should be explicit and documented.
+- **Modules:** split when a group of 3+ related functions emerges, or when a single module accumulates many responsibilities. One clear purpose per file — if you need "and also" to describe it, split it.
+- **Naming:** snake_case file/module names that match the crate layout (`usb.rs`, `mtp.rs`). Prefer small cohesive modules over large multi-purpose files.
+
+### Critical rules
+
+1. **Never commit secrets or identifiers** — no USB serials, credentials, tokens, or Amazon account details. Mask stable identifiers in logs and UI diagnostics (§18).
+2. **Never perform destructive device operations without explicit approval** — no uploads, deletes, moves, or renames until the write milestone is explicitly approved (§12).
+3. **No speculative changes** — do not refactor unrelated working infrastructure gratuitously, and do not "fix" things not mentioned in the request.
+4. **Read before writing** — inspect existing code and understand the surrounding module before changing it.
+5. **Keep Kindred's boundary intact** — application/CLI code calls Kindred abstractions; do not leak `mtp-rs` or `rusb` types into the application/UI layer (§8).
+
+### Branch naming (short-lived task branches)
+
+Short-lived task branches are created off `development` and closed via `branch <name>` (§22). Use conventional prefixes:
+
+- `feature/<name>` — new capability
+- `fix/<name>` — bug fix
+- `chore/<name>` — maintenance/tooling
+- `docs/<name>` — documentation
+- `infrastructure/<name>` — CI/build/tooling
+
+These prefixes align with the TCTBP profile's `minorBranchPrefixes` (`slice/`, `feature/`) and the CI trigger list in §22.
+
+### Testing conventions
+
+There are no tests in the workspace yet; these conventions apply from the first test written onward:
+
+- Unit tests: `#[cfg(test)]` modules co-located with the code they test.
+- Integration tests: `tests/` at the crate root (e.g. `crates/kindred/tests/`).
+- The TCTBP `cargo test` gate is blocking for promote/ship (§22); keep it green before checkpointing.
+
+### Interaction conventions
+
+- **"Thoughts mode":** if a prompt ends with the word `thoughts`, respond with opinion and analysis only — no code or file changes.
+
 ---
 
 ## 15. CLI role
