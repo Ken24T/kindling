@@ -5,3 +5,8 @@ members = [
     "crates/kindred",
     "apps/kindling-cli",
 ]
+
+# Single version source for the workspace, read by the TCTBP runtime
+# (profile versioning.sourceOfTruth = "Cargo.toml:workspace.package.version").
+[workspace.package]
+version = "0.1.0"

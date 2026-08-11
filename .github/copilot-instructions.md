@@ -700,4 +700,52 @@ A good next sequence is:
 10. Confirm that `documents` is visible as a directory.
 11. Only then consider committing Milestone 2B.
 
+---
+
+## 22. TCTBP workflow integration (reconciled 2026-08-12)
+
+This repository has been reconciled with the TCTBP workflow system from the TCTBP-Web template repo. It uses the **staged branch model**: `development` → `staging` → `main`.
+
+### Branch rules
+
+- Active development happens on `development`.
+- Never commit directly to `staging` or `main`; promote through the chain.
+- `promote staging` merges development into staging; `promote production` merges staging into main; `ship` creates the production release/tag from a clean `main`.
+- Short-lived task branches may be created off `development` and closed via `branch <name>`.
+
+### Key files (do not casually edit)
+
+- `.github/TCTBP.json` — machine-readable workflow policy and project profile (source of truth).
+- `.github/TCTBP Agent.md` — behavioural rules and guard rails.
+- `.github/TCTBP Cheatsheet.md` — operator quick reference.
+- `scripts/tctbp-run-*.js` — deterministic workflow runners (plain Node, no dependencies).
+
+### TCTBP triggers handled by the TCTBP agent
+
+`checkpoint`, `publish`, `promote staging`, `promote production`, `ship`, `deploy dev/staging/prod` (not configured yet — desktop distribution pending), `handover`, `handover local`, `resume`, `orient`, `status`, `abort`, `gate test/lint/build`, `rollback`, `version status`.
+
+When these phrases are used, follow the TCTBP agent workflow rather than implementing the steps manually.
+
+### Verification commands (Cargo)
+
+- `gate test` → `cargo test`
+- `gate lint` → `cargo clippy --workspace --all-targets`
+- `gate build` → `cargo build`
+- `format` → `cargo fmt`
+
+### Versioning
+
+- Single version source: `Cargo.toml` `[workspace.package] version` (the runtime keeps `Cargo.lock` in sync on bump).
+- Tags use `v{version}`, created at ship time.
+
+### Handover continuation
+
+`handover` / `handover local` compose a continuation file under `.tctbp/continuation/` so sessions can resume across machines with `orient` or `resume`.
+
+### Notes
+
+- The reconciled runtime does not include the web-scaffold or hotfix runners; those triggers are intentionally not active.
+- Deploy environments are not yet configured (this is a desktop application); `deploy` workflows stop with 'no targets configured'.
+- Pre-TCTBP commits were made directly to `main`; that was the pre-workflow convention. From this point, milestone work follows the staged model on `development`.
+
 Keep the scope there unless testing reveals a blocker.

@@ -1,2 +1,6 @@
 /target/
 *.rs.bk
+
+# TCTBP local runtime state and file-backup artefacts
+.github/.tctbp-backups/
+.tctbp-runtime/
