@@ -26,11 +26,61 @@ pub fn active_section_style(theme: &Theme, _status: button::Status) -> button::S
     }
 }
 
-/// Outline the selected book card with the theme's primary colour.
-pub fn selected_card_style(theme: &Theme, _status: button::Status) -> button::Style {
+/// Pane chrome; the border highlights while a drag hovers over it.
+pub fn pane_style(theme: &Theme, drop_target: bool) -> container::Style {
     let palette = theme.palette();
+    let border_color = if drop_target {
+        palette.primary
+    } else {
+        Color {
+            a: 0.35,
+            ..palette.text
+        }
+    };
+    container::Style::default()
+        .background(palette.background)
+        .border(
+            Border::default()
+                .color(border_color)
+                .width(if drop_target { 2 } else { 1 }),
+        )
+}
+
+/// Cover card chrome: selection outline, or a stronger drag outline.
+pub fn card_style(theme: &Theme, selected: bool, dragging: bool) -> container::Style {
+    let palette = theme.palette();
+    let color = if dragging {
+        Color {
+            a: 0.8,
+            ..palette.primary
+        }
+    } else if selected {
+        palette.primary
+    } else {
+        Color {
+            a: 0.2,
+            ..palette.text
+        }
+    };
+    container::Style::default().border(Border::default().width(2).color(color))
+}
+
+/// List/details row background for the selected row.
+pub fn row_style(theme: &Theme, selected: bool) -> container::Style {
+    if selected {
+        container::Style::default().background(Background::Color(Color {
+            a: 0.15,
+            ..theme.palette().text
+        }))
+    } else {
+        container::Style::default()
+    }
+}
+
+/// Details-header sort button: theme primary text when active.
+pub fn header_button_style(theme: &Theme, _status: button::Status) -> button::Style {
     button::Style {
-        border: Border::default().width(2).color(palette.primary),
+        text_color: theme.palette().primary,
         ..button::Style::default()
     }
 }

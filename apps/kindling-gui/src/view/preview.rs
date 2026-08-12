@@ -1,37 +1,20 @@
-//! Right preview pane: details of the selected book.
+//! Right preview pane: details and action buttons for the selected book.
 
-use iced::widget::{column, container, text};
+use iced::widget::{button, column, container, text};
 use iced::{Element, Length};
 
-use kindred::{BookFormat, BookStatus};
-
-use crate::model::{AppState, Message};
+use crate::model::{AppState, BookEntry, Message, status_label};
 
 use super::PREVIEW_WIDTH;
+use super::format_size;
 use super::theme::panel_style;
 
 pub fn preview(state: &AppState) -> Element<'_, Message> {
-    let details: Element<'_, Message> = match state.selected {
-        Some(index) => {
-            let entry = &state.catalogue[index];
-            let book = &entry.book;
-            column![
-                text(&book.title).size(16),
-                text(format!("Format: {}", format_name(book.format))).size(13),
-                text(format!(
-                    "Size: {:.2} MB",
-                    book.size_bytes as f64 / 1_000_000.0
-                ))
-                .size(13),
-                match &book.asin {
-                    Some(asin) => text(format!("ASIN: {asin}")).size(13),
-                    None => text("ASIN: -").size(13),
-                },
-                text(format!("Status: {}", status_name(entry.status))).size(13),
-            ]
-            .spacing(6)
-            .into()
-        }
+    let details: Element<'_, Message> = match state
+        .selected
+        .and_then(|index| state.catalogue.get(index).map(|entry| (index, entry)))
+    {
+        Some((index, entry)) => preview_details(index, entry),
         None => text("Select a book to see details.").size(13).into(),
     };
 
@@ -43,17 +26,55 @@ pub fn preview(state: &AppState) -> Element<'_, Message> {
         .into()
 }
 
-fn format_name(format: BookFormat) -> &'static str {
-    match format {
-        BookFormat::Kfx => "KFX",
-        BookFormat::Azw => "AZW",
-    }
-}
+fn preview_details<'a>(index: usize, entry: &'a BookEntry) -> Element<'a, Message> {
+    let mut details = column![
+        text(&entry.title).size(16),
+        text(format!("Format: {}", entry.format.label())).size(13),
+        text(format!("Size: {}", format_size(entry.size_bytes))).size(13),
+        text(format!("Status: {}", status_label(entry.status))).size(13),
+    ]
+    .spacing(6);
 
-fn status_name(status: BookStatus) -> &'static str {
-    match status {
-        BookStatus::Both => "On device + local",
-        BookStatus::OnDevice => "On device",
-        BookStatus::LocalOnly => "Local only",
+    if let Some(asin) = entry.asin() {
+        details = details.push(text(format!("ASIN: {asin}")).size(13));
     }
+
+    if let Some(record) = &entry.local {
+        let location = record.local_path.as_deref().unwrap_or("device only");
+        details = details.push(text(format!("Local: {location}")).size(11));
+    }
+    if let Some(book) = &entry.device {
+        details = details.push(
+            text(format!(
+                "On device: yes · {} metadata objects",
+                book.metadata_handles.len()
+            ))
+            .size(11),
+        );
+    }
+
+    // Click equivalents of the drag-drop transfers (PLAN: "context-menu/button
+    // equivalents").
+    let mut actions: Vec<Element<'a, Message>> = Vec::new();
+    if entry.device.is_some() {
+        actions.push(
+            button("Copy to Library")
+                .on_press(Message::CopyToLibrary(index))
+                .width(Length::Fill)
+                .into(),
+        );
+    }
+    if entry.has_local_copy() {
+        actions.push(
+            button("Send to Kindle")
+                .on_press(Message::SendToKindle(index))
+                .width(Length::Fill)
+                .into(),
+        );
+    }
+    if !actions.is_empty() {
+        details = details.push(column(actions).spacing(4).padding(4));
+    }
+
+    details.into()
 }

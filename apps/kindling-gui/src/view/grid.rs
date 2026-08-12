@@ -1,20 +1,26 @@
-//! Centre cover grid: cards for the visible books of the current section.
+//! Cover grid for one library pane (GUI M2): draggable cover cards.
+//!
+//! Each card is a `mouse_area` whose press starts a drag (`DragStarted`);
+//! the surrounding pane handles the release/drop (see `view::book_pane`).
 
-use iced::widget::{Grid, button, column, container, scrollable, text};
-use iced::{Color, Element, Length};
+use iced::widget::{Grid, column, container, mouse_area, scrollable, text};
+use iced::{Color, Element, Length, mouse};
 
 use kindred::BookStatus;
 
-use crate::model::{AppState, BookEntry, Message};
+use crate::model::{AppState, Message, Pane};
 
-use super::theme::{cover_color, selected_card_style};
+use super::theme::{card_style, cover_color};
 use super::{COVER_HEIGHT, COVER_WIDTH};
 
-pub fn book_grid(state: &AppState) -> Element<'_, Message> {
-    let mut grid = Grid::new().fluid(COVER_WIDTH + 24.0).spacing(14);
-    for index in state.visible_books() {
-        let entry = &state.catalogue[index];
-        grid = grid.push(cover_card(state, index, entry));
+pub fn book_grid<'a>(state: &'a AppState, pane: Pane, indices: &[usize]) -> Element<'a, Message> {
+    if indices.is_empty() {
+        return empty_pane();
+    }
+
+    let mut grid = Grid::new().fluid(COVER_WIDTH + 24.0).spacing(12);
+    for &index in indices {
+        grid = grid.push(cover_card(state, pane, index));
     }
 
     scrollable(grid)
@@ -23,36 +29,46 @@ pub fn book_grid(state: &AppState) -> Element<'_, Message> {
         .into()
 }
 
-fn cover_card<'a>(state: &AppState, index: usize, entry: &'a BookEntry) -> Element<'a, Message> {
+fn empty_pane<'a>() -> Element<'a, Message> {
+    container(text("No books").size(13))
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .center_x(Length::Fill)
+        .center_y(Length::Fill)
+        .into()
+}
+
+fn cover_card<'a>(state: &'a AppState, pane: Pane, index: usize) -> Element<'a, Message> {
+    let entry = &state.catalogue[index];
     let selected = state.selected == Some(index);
+    let dragging = state.drag.is_some_and(|drag| drag.index == index);
 
     let cover = container(
-        text(first_letter(&entry.book.title))
-            .size(30)
+        text(first_letter(&entry.title))
+            .size(28)
             .color(Color::WHITE),
     )
     .width(Length::Fixed(COVER_WIDTH))
     .height(Length::Fixed(COVER_HEIGHT))
     .center_x(Length::Fill)
     .center_y(Length::Fill)
-    .style(|_| container::Style::default().background(cover_color(&entry.book.title)));
+    .style(|_| container::Style::default().background(cover_color(&entry.title)));
 
-    let mut card = button(
+    let card = container(
         column![
             cover,
-            text(&entry.book.title).size(12),
+            text(&entry.title).size(11),
             status_badge(entry.status),
         ]
         .spacing(4),
     )
-    .on_press(Message::BookSelected(index))
-    .width(Length::Fixed(COVER_WIDTH + 8.0));
+    .width(Length::Fixed(COVER_WIDTH + 8.0))
+    .style(move |theme| card_style(theme, selected, dragging));
 
-    if selected {
-        card = card.style(selected_card_style);
-    }
-
-    card.into()
+    mouse_area(card)
+        .on_press(Message::DragStarted { pane, index })
+        .interaction(mouse::Interaction::Pointer)
+        .into()
 }
 
 fn status_badge(status: BookStatus) -> Element<'static, Message> {
@@ -61,7 +77,7 @@ fn status_badge(status: BookStatus) -> Element<'static, Message> {
         BookStatus::OnDevice => ("on device", Color::from_rgb(0.2, 0.45, 0.75)),
         BookStatus::LocalOnly => ("local only", Color::from_rgb(0.8, 0.55, 0.15)),
     };
-    text(label).size(11).color(color).into()
+    text(label).size(10).color(color).into()
 }
 
 fn first_letter(title: &str) -> String {

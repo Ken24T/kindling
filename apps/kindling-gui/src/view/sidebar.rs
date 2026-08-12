@@ -1,11 +1,9 @@
-//! Left section sidebar: app title, library sections, footer.
+//! Left sidebar: device identity, view-mode selection, per-pane counts.
 
-use iced::widget::{button, column, container, row, space, text};
+use iced::widget::{button, column, container, space, text};
 use iced::{Element, Length};
 
-use kindred::BookStatus;
-
-use crate::model::{AppState, Message, Section};
+use crate::model::{AppState, Message, Pane, ViewMode};
 
 use super::SIDEBAR_WIDTH;
 use super::theme::{active_section_style, panel_style};
@@ -15,10 +13,15 @@ pub fn sidebar(state: &AppState) -> Element<'_, Message> {
         column![
             text("Kindling").size(20),
             text("Library").size(13),
-            section_button(state, Section::LocalLibrary),
-            section_button(state, Section::KindleLibrary),
+            device_block(state),
             space::vertical(),
-            text("GUI M1").size(11),
+            text("View").size(13),
+            view_button(state, ViewMode::Covers),
+            view_button(state, ViewMode::List),
+            view_button(state, ViewMode::Details),
+            space::vertical(),
+            text(format!("Local: {}", state.pane_books(Pane::Local).len())).size(11),
+            text(format!("Kindle: {}", state.pane_books(Pane::Kindle).len())).size(11),
         ]
         .spacing(6),
     )
@@ -29,26 +32,25 @@ pub fn sidebar(state: &AppState) -> Element<'_, Message> {
     .into()
 }
 
-fn section_button(state: &AppState, section: Section) -> Element<'_, Message> {
-    let count = state
-        .catalogue
-        .iter()
-        .filter(|entry| match section {
-            Section::LocalLibrary => entry.status != BookStatus::OnDevice,
-            Section::KindleLibrary => entry.status != BookStatus::LocalOnly,
-        })
-        .count();
+fn device_block(state: &AppState) -> Element<'_, Message> {
+    match &state.device {
+        Some(device) => column![
+            text(&device.friendly_name).size(13),
+            text(&device.model).size(11),
+        ]
+        .spacing(2)
+        .into(),
+        None => text("No Kindle attached").size(12).into(),
+    }
+}
 
-    let label = row![
-        text(section.title()),
-        space::horizontal(),
-        text(count.to_string()),
-    ]
-    .padding(6)
-    .width(Length::Fill);
+fn view_button(state: &AppState, mode: ViewMode) -> Element<'_, Message> {
+    let active = state.view_mode == mode;
 
-    let active = state.section == section;
-    let mut button = button(label).on_press(Message::SectionSelected(section));
+    let mut button = button(text(mode.title()))
+        .on_press(Message::ViewModeSelected(mode))
+        .width(Length::Fill);
+
     if active {
         button = button.style(active_section_style);
     }
