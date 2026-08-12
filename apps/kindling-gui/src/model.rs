@@ -3,7 +3,7 @@
 //! Pure types only; update logic lives in `update.rs`, data wiring in
 //! `data/`. Views import `Message` through this module.
 
-use kindred::{Book, BookFormat, BookStatus, LibraryRecord};
+use kindred::{Book, BookFormat, BookStatus, LibraryRecord, LocalCollection};
 
 pub use crate::update::Message;
 
@@ -110,6 +110,18 @@ impl BookEntry {
         }
         None
     }
+
+    /// The stable library key used by collections (ASIN, or `dict:<title>`).
+    pub fn key(&self) -> String {
+        match (&self.device, &self.local) {
+            (Some(book), _) => book
+                .asin
+                .clone()
+                .unwrap_or_else(|| format!("dict:{}", self.title)),
+            (None, Some(record)) => record.key.clone(),
+            (None, None) => format!("dict:{}", self.title),
+        }
+    }
 }
 
 /// An in-flight drag of a book from one pane.
@@ -144,6 +156,14 @@ pub struct AppState {
     pub drop_target: Option<Pane>,
     /// Last user-facing status (transfer results, load errors).
     pub status_message: Option<String>,
+    /// User-authored local collections.
+    pub collections: Vec<LocalCollection>,
+    /// Selected collection (index into `collections`); filters the Local pane.
+    pub selected_collection: Option<usize>,
+    /// Inline "new collection" input value.
+    pub new_collection_name: String,
+    /// Whether the inline "new collection" input is visible.
+    pub show_new_collection: bool,
 }
 
 impl Default for AppState {
@@ -158,6 +178,10 @@ impl Default for AppState {
             drag: None,
             drop_target: None,
             status_message: None,
+            collections: Vec::new(),
+            selected_collection: None,
+            new_collection_name: String::new(),
+            show_new_collection: false,
         }
     }
 }
@@ -170,7 +194,7 @@ impl AppState {
             .iter()
             .enumerate()
             .filter(|(_, entry)| match pane {
-                Pane::Local => entry.has_local_copy(),
+                Pane::Local => self.in_local_pane(entry),
                 Pane::Kindle => entry.device.is_some(),
             })
             .map(|(index, _)| index)
@@ -183,6 +207,33 @@ impl AppState {
             indices.reverse();
         }
         indices
+    }
+
+    /// Whether an entry shows in the Local pane (has a copy, and is a member
+    /// of the selected collection when one is selected).
+    fn in_local_pane(&self, entry: &BookEntry) -> bool {
+        if !entry.has_local_copy() {
+            return false;
+        }
+        match self.selected_collection {
+            Some(index) => self
+                .collections
+                .get(index)
+                .map(|collection| collection.book_keys.contains(&entry.key()))
+                .unwrap_or(true),
+            None => true,
+        }
+    }
+
+    /// Number of locally-held books in a collection (for sidebar counts).
+    pub fn collection_count(&self, index: usize) -> usize {
+        let Some(collection) = self.collections.get(index) else {
+            return 0;
+        };
+        self.catalogue
+            .iter()
+            .filter(|entry| entry.has_local_copy() && collection.book_keys.contains(&entry.key()))
+            .count()
     }
 }
 
@@ -300,5 +351,45 @@ mod tests {
         let mut state = test_support::state();
         state.catalogue[2].local.as_mut().unwrap().key = "B0048EL62A".to_owned();
         assert_eq!(state.catalogue[2].asin(), Some("B0048EL62A"));
+    }
+
+    #[test]
+    fn key_prefers_device_asin_then_record_key() {
+        let state = test_support::state();
+        assert_eq!(state.catalogue[0].key(), "ASINAlpha");
+        assert_eq!(state.catalogue[1].key(), "ASINBeta");
+        assert_eq!(state.catalogue[2].key(), "ASINGamma");
+
+        // A non-ASIN record (dict key) falls back to its record key.
+        let mut state = test_support::state();
+        state.catalogue[2].local.as_mut().unwrap().key = "dict:Oxford Dictionary".to_owned();
+        assert_eq!(state.catalogue[2].key(), "dict:Oxford Dictionary");
+    }
+
+    #[test]
+    fn selected_collection_filters_local_pane() {
+        let mut state = test_support::state();
+        state.collections = vec![LocalCollection {
+            name: "Favourites".to_owned(),
+            book_keys: vec!["ASINAlpha".to_owned()],
+        }];
+        state.selected_collection = Some(0);
+
+        // Local pane now shows only Alpha (the collection member).
+        assert_eq!(state.pane_books(Pane::Local), vec![0]);
+        // Kindle pane is unaffected by collection selection.
+        assert_eq!(state.pane_books(Pane::Kindle), vec![0, 1]);
+    }
+
+    #[test]
+    fn collection_count_counts_local_members() {
+        let mut state = test_support::state();
+        state.collections = vec![LocalCollection {
+            name: "Favourites".to_owned(),
+            book_keys: vec!["ASINAlpha".to_owned(), "ASINBeta".to_owned()],
+        }];
+
+        // Alpha (Both) counts; Beta is on-device only, so not a local member.
+        assert_eq!(state.collection_count(0), 1);
     }
 }

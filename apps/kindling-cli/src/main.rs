@@ -24,6 +24,10 @@ fn usage() {
     eprintln!("  library            List the local library");
     eprintln!("  library reconcile  Reconcile the library against the attached Kindle");
     eprintln!("  library add <p>    Add a local book file to the local library");
+    eprintln!("  library collections  List local collections");
+    eprintln!(
+        "  library collection <add|rename|delete|add-book|remove-book> ...  Manage local collections"
+    );
 }
 
 fn main() {
@@ -125,9 +129,36 @@ fn main() {
                         std::process::exit(1);
                     }
                 },
+                Some("collections") => block_on(commands::list_collections()),
+                Some("collection") => {
+                    let mut sub = args;
+                    match (sub.next().as_deref(), sub.next(), sub.next()) {
+                        (Some("add"), Some(name), _) => block_on(commands::collection_add(&name)),
+                        (Some("rename"), Some(old), Some(new)) => {
+                            block_on(commands::collection_rename(&old, &new))
+                        }
+                        (Some("delete"), Some(name), _) => {
+                            block_on(commands::collection_delete(&name))
+                        }
+                        (Some("add-book"), Some(name), Some(key)) => {
+                            block_on(commands::collection_add_book(&name, &key))
+                        }
+                        (Some("remove-book"), Some(name), Some(key)) => {
+                            block_on(commands::collection_remove_book(&name, &key))
+                        }
+                        _ => {
+                            eprintln!(
+                                "Usage: kindling-cli library collection [add <name>|rename <old> <new>|delete <name>|add-book <name> <key>|remove-book <name> <key>]"
+                            );
+                            std::process::exit(1);
+                        }
+                    }
+                }
                 Some(other) => {
                     eprintln!("Unknown library subcommand '{other}'.");
-                    eprintln!("Usage: kindling-cli library [reconcile|add <path>]");
+                    eprintln!(
+                        "Usage: kindling-cli library [reconcile|add <path>|collections|collection ...]"
+                    );
                     std::process::exit(1);
                 }
             }

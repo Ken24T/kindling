@@ -14,7 +14,7 @@ pub fn preview(state: &AppState) -> Element<'_, Message> {
         .selected
         .and_then(|index| state.catalogue.get(index).map(|entry| (index, entry)))
     {
-        Some((index, entry)) => preview_details(index, entry),
+        Some((index, entry)) => preview_details(state, index, entry),
         None => text("Select a book to see details.").size(13).into(),
     };
 
@@ -26,7 +26,11 @@ pub fn preview(state: &AppState) -> Element<'_, Message> {
         .into()
 }
 
-fn preview_details<'a>(index: usize, entry: &'a BookEntry) -> Element<'a, Message> {
+fn preview_details<'a>(
+    state: &'a AppState,
+    index: usize,
+    entry: &'a BookEntry,
+) -> Element<'a, Message> {
     let mut details = column![
         text(&entry.title).size(16),
         text(format!("Format: {}", entry.format.label())).size(13),
@@ -68,6 +72,18 @@ fn preview_details<'a>(index: usize, entry: &'a BookEntry) -> Element<'a, Messag
         actions.push(
             button("Send to Kindle")
                 .on_press(Message::SendToKindle(index))
+                .width(Length::Fill)
+                .into(),
+        );
+    }
+    if state
+        .selected_collection
+        .and_then(|collection_index| state.collections.get(collection_index))
+        .is_some_and(|collection| collection.book_keys.contains(&entry.key()))
+    {
+        actions.push(
+            button("Remove from Collection")
+                .on_press(Message::CollectionRemoveBook { index })
                 .width(Length::Fill)
                 .into(),
         );

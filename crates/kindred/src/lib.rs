@@ -1,3 +1,4 @@
+mod collections;
 mod error;
 mod inventory;
 mod library;
@@ -7,6 +8,7 @@ mod profile;
 mod transfer;
 mod usb;
 
+pub use collections::LocalCollection;
 pub use error::KindredError;
 
 pub use inventory::{Book, BookFormat, KindleInventory, inventory_device, parse_book_filename};

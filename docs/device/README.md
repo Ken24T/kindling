@@ -136,14 +136,77 @@ system/
 └── fonts/
 ```
 
-### Kindle Collections — NOT exposed over MTP (resolved 2026-08-12)
+### Kindle Collections — NOT exposed over MTP (resolved 2026-08-12, deep-verified)
 
-A full read-only walk of `system/` (all subfolders descended) found **no collections
-metadata**: no `collections.json`, `collections.db`, or `collection.*` anywhere. The only
-databases present are unrelated (search index, device profiles, annotations, FreeTime/Kids,
-file-manager cache, vocabulary, sync DB). Modern firmware keeps Amazon Collections
-cloud-synced with no local MTP-reachable representation. **Collections are out of scope for
-the USB transport.**
+An exhaustive read-only sweep found **no collections metadata anywhere on the device**:
+
+- **Full `system/` walk** (all subfolders descended): no `collections.json`,
+  `collections.db`, or `collection.*`.
+- **Every SQLite DB downloaded, schema-dumped and content-scanned** (UTF-8 + UTF-16):
+  `profiles.db` (user profiles), `ksdk_annotation_v1.db` (annotations), `freetime.db`
+  (Amazon Kids), `fMcache.db` (session cache), `vocab.db` (vocabulary), `fastSyncDB`
+  (cloud-sync) — zero collection tables, columns, or strings. `fastSyncDB`'s sync tables
+  (`local_edits`, `staged_content`) are **empty** — no cloud entities cached.
+- **Search index** (`Search Indexes/Index.db`, JDBM/BTree, 2.76 MB) contains plaintext
+  book titles (e.g. "Stranger Diaries" ×21, "Rhythm of War" ×18) but **zero** collection
+  terms — collection names would be visible if the device indexed/stored them.
+- **Per-book sidecar metadata** (`.sdr/.mf` delivery JSON, `.meta` download cache, `.yjf`):
+  delivery/caching only — content id, `kindle.pdoc` type, endpoints, ETags. No collection
+  fields.
+- **KFX book content**: standard `kindle_title_metadata`/`kindle_ebook_metadata`/`ASIN`/
+  `author` only; "collection"/"series" strings are book prose, not metadata.
+- **`documents/` tree fully enumerated** (root, `Downloads/Items01/`, `dictionaries/`,
+  `.cache/kf8/`, sidecars): no collection files.
+
+Conclusion: Amazon Collections have **no on-device, MTP-reachable representation** — they
+are cloud-synced and only visible through the Kindle's own UI. **Collections are out of
+scope for the USB transport.** Caveats: firmware-specific (5.19.5), and MTP only exposes
+the filesystem view — a non-MTP partition could not be inspected.
+
+### Where collections actually live (so the gap is understood)
+
+Collections data **does** exist — users create/manage categories in the Kindle's own
+touchscreen UI (Library → Collections). That UI writes to a **system partition** (the
+internal `/var/local/…` area) which MTP does **not** expose, and the data is **synced with
+Amazon's cloud** (re-appears after re-registration/factory reset). MTP on this device
+exposes exactly **one** storage (12.55 GB, confirmed by `mtp-probe`), and that filesystem
+contains zero collection references. The search index — which indexes titles for the Home
+screen search — has no collection field either, and the cloud-sync cache (`fastSyncDB`)
+that would hold collection entities on the user partition is empty.
+
+Historical note: older Kindle firmware (pre-cloud "local collections") stored collections
+in a user-accessible `system/collections.json`, which is why USB tools could once manage
+them. Modern firmware moved collections to cloud-synced storage in the system partition,
+deliberately removing USB management. Reaching that area requires root/jailbreak (out of
+scope, §12); the only non-USB path would be a future Wi-Fi/cloud integration.
+
+### Sync-trigger proof (2026-08-12) — even a real sync leaves nothing usable
+
+To rule out "it's just not synced yet", a **real collection was created on the device UI**
+("TestSync", one book added, over Wi-Fi) and the sync surfaces were compared before/after:
+
+- `fastSyncDB`, `ksdk_annotation.db` — **byte-identical** (md5 unchanged); sync tables
+  stay empty.
+- `CloudIndices/` — still empty; `Search Indexes/Index.db` — no name, no "Collection", no
+  UUID.
+- **`fMcache.db` changed** (session/telemetry cache) — but it captured only **UI
+  telemetry**: `CollectionCreated`, `create_collection` action, the collection's **UUID**
+  (`45cda083-…`, `"Type":"COLLECTION"`, `"Children_Count":"1"`). The collection **name
+  ("TestSync") and its member book appear nowhere** on the USB-visible partition.
+
+Proof: the collection exists as a cloud object (it has a UUID), yet the MTP-visible
+filesystem stores at most the telemetry that the action happened — never the category name
+or membership. USB/MTP cannot recover collections on this firmware, even after a live sync.
+
+### Wi-Fi / LAN proof (2026-08-12) — the device exposes no LAN service
+
+The stock Paperwhite (5.19.5), awake on the home Wi-Fi (5 GHz), responds to ping
+(~80 ms RTT) but **listens on zero TCP ports**. An exhaustive scan of ports 1–1024 plus
+common high ports (22 SSH, 23 telnet, 53, 80/8080 HTTP, 443/8443 HTTPS, 554, 5000, 5555
+ADB, 9100, 2222, 49152) found nothing open. The Kindle is a pure **cloud client**: it makes
+outbound connections to Amazon (sync, delivery) but runs no server a PC could connect to.
+There is no LAN-visible service to query — for collections or anything else. (Jailbroken
+Kindles expose SSH; stock firmware does not.)
 
 ### `documents/` detail
 

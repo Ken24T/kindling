@@ -6,6 +6,7 @@
 
 mod data;
 mod model;
+mod tasks;
 mod update;
 mod view;
 

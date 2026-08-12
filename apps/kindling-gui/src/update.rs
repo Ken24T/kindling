@@ -7,6 +7,9 @@ use iced::task::Task;
 
 use crate::data::{self, LoadResult, TransferOutcome};
 use crate::model::{AppState, DropAction, Pane, Sort, SortKey, ViewMode};
+use crate::tasks::{
+    collection_add_task, collection_changed_task, copy_to_library_task, send_to_kindle_task,
+};
 
 /// Messages the UI can process.
 #[derive(Debug, Clone)]
@@ -17,12 +20,20 @@ pub enum Message {
     DragOver(Pane),
     DragExited,
     DropOn(Pane),
+    DropOnCollection(usize),
     DragCancelled,
     CopyToLibrary(usize),
     SendToKindle(usize),
     Refresh,
     Loaded(Box<LoadResult>),
     TransferFinished(Box<Result<TransferOutcome, String>>),
+    CollectionSelected(Option<usize>),
+    CollectionCreate,
+    CollectionNameChanged(String),
+    ShowNewCollection,
+    CollectionDelete(usize),
+    CollectionRemoveBook { index: usize },
+    CollectionChanged(Box<Result<String, String>>),
 }
 
 /// iced boot: default state plus an initial data load.
@@ -73,6 +84,12 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                 None => Task::none(),
             }
         }
+        Message::DropOnCollection(collection_index) => {
+            let task = collection_add_task(state, collection_index);
+            state.drag = None;
+            state.drop_target = None;
+            task
+        }
         Message::DragCancelled => {
             state.drag = None;
             state.drop_target = None;
@@ -80,6 +97,63 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
         }
         Message::CopyToLibrary(index) => copy_to_library_task(state, index),
         Message::SendToKindle(index) => send_to_kindle_task(state, index),
+        Message::CollectionSelected(selection) => {
+            state.selected_collection = selection;
+            Task::none()
+        }
+        Message::CollectionCreate => {
+            let name = state.new_collection_name.trim().to_owned();
+            if name.is_empty() {
+                return Task::none();
+            }
+            state.new_collection_name = String::new();
+            state.show_new_collection = false;
+            collection_changed_task(data::create_collection(name))
+        }
+        Message::CollectionNameChanged(name) => {
+            state.new_collection_name = name;
+            Task::none()
+        }
+        Message::ShowNewCollection => {
+            state.show_new_collection = !state.show_new_collection;
+            Task::none()
+        }
+        Message::CollectionDelete(index) => {
+            let Some(collection) = state.collections.get(index) else {
+                return Task::none();
+            };
+            let name = collection.name.clone();
+            if state.selected_collection == Some(index) {
+                state.selected_collection = None;
+            }
+            collection_changed_task(data::delete_collection(name))
+        }
+        Message::CollectionRemoveBook { index } => {
+            let Some(collection_index) = state.selected_collection else {
+                return Task::none();
+            };
+            let Some(entry) = state.catalogue.get(index) else {
+                return Task::none();
+            };
+            let Some(collection) = state.collections.get(collection_index) else {
+                return Task::none();
+            };
+            collection_changed_task(data::remove_book_from_collection(
+                collection.name.clone(),
+                entry.key(),
+            ))
+        }
+        Message::CollectionChanged(result) => match *result {
+            Ok(summary) => {
+                state.status_message = Some(summary);
+                state.loading = true;
+                Task::perform(data::load_all(), |result| Message::Loaded(Box::new(result)))
+            }
+            Err(error) => {
+                state.status_message = Some(format!("Collection change failed: {error}"));
+                Task::none()
+            }
+        },
         Message::Refresh => {
             state.loading = true;
             Task::perform(data::load_all(), |result| Message::Loaded(Box::new(result)))
@@ -123,52 +197,27 @@ pub fn drop_action(state: &AppState, target: Pane) -> Option<DropAction> {
     }
 }
 
-/// Apply a fresh `LoadResult`: rebuild the catalogue and device identity.
+/// Apply a fresh `LoadResult`: rebuild the catalogue, device identity, and
+/// collections.
 fn apply_loaded(state: &mut AppState, result: LoadResult) {
     state.loading = false;
     state.device = result.device.clone();
     state.catalogue = data::build_catalogue(result.inventory.as_ref(), &result.library);
+    state.collections = result.library.collections.clone();
 
     if let Some(selected) = state.selected
         && selected >= state.catalogue.len()
     {
         state.selected = None;
     }
+    if let Some(selected) = state.selected_collection
+        && selected >= state.collections.len()
+    {
+        state.selected_collection = None;
+    }
     if !result.errors.is_empty() {
         state.status_message = Some(result.errors.join("; "));
     }
-}
-
-/// Task for copying a device book into the local library.
-fn copy_to_library_task(state: &AppState, index: usize) -> Task<Message> {
-    let Some(book) = state
-        .catalogue
-        .get(index)
-        .and_then(|entry| entry.device.clone())
-    else {
-        return Task::none();
-    };
-    Task::perform(data::copy_from_kindle(book), |result| {
-        Message::TransferFinished(Box::new(result))
-    })
-}
-
-/// Task for sending a local book file to the Kindle.
-fn send_to_kindle_task(state: &AppState, index: usize) -> Task<Message> {
-    let Some(entry) = state.catalogue.get(index) else {
-        return Task::none();
-    };
-    let Some(local_path) = entry
-        .local
-        .as_ref()
-        .and_then(|record| record.local_path.clone())
-    else {
-        return Task::none();
-    };
-    let title = entry.title.clone();
-    Task::perform(data::add_to_kindle(local_path, title), |result| {
-        Message::TransferFinished(Box::new(result))
-    })
 }
 
 #[cfg(test)]
@@ -296,5 +345,43 @@ mod tests {
         assert!(!state.loading);
         assert!(state.catalogue.is_empty());
         assert!(state.device.is_none());
+    }
+
+    #[test]
+    fn collection_selection_sets_and_clears() {
+        let mut state = state();
+        state.collections = vec![kindred::LocalCollection {
+            name: "Favourites".to_owned(),
+            book_keys: vec![],
+        }];
+
+        apply(&mut state, Message::CollectionSelected(Some(0)));
+        assert_eq!(state.selected_collection, Some(0));
+
+        apply(&mut state, Message::CollectionSelected(None));
+        assert_eq!(state.selected_collection, None);
+    }
+
+    #[test]
+    fn collection_create_with_blank_name_is_a_no_op() {
+        let mut state = state();
+        state.show_new_collection = true;
+        state.new_collection_name = "   ".to_owned();
+        apply(&mut state, Message::CollectionCreate);
+        assert!(state.show_new_collection);
+        assert_eq!(state.new_collection_name, "   ");
+    }
+
+    #[test]
+    fn collection_delete_clears_matching_selection() {
+        let mut state = state();
+        state.collections = vec![kindred::LocalCollection {
+            name: "Favourites".to_owned(),
+            book_keys: vec![],
+        }];
+        state.selected_collection = Some(0);
+
+        apply(&mut state, Message::CollectionDelete(0));
+        assert_eq!(state.selected_collection, None);
     }
 }

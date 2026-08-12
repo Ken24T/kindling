@@ -133,3 +133,71 @@ pub async fn add_library(path: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("Added '{file_name}' to the local library.");
     Ok(())
 }
+
+pub async fn list_collections() -> Result<(), Box<dyn std::error::Error>> {
+    let path = library_path();
+    let library = LocalLibrary::load(&path)?;
+
+    if library.collections.is_empty() {
+        println!("No local collections ({}).", path.display());
+        return Ok(());
+    }
+
+    println!("Local collections ({}):", path.display());
+    for collection in &library.collections {
+        println!(
+            "  {}  [{} books]",
+            collection.name,
+            collection.book_keys.len()
+        );
+    }
+    Ok(())
+}
+
+pub async fn collection_add(name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let path = library_path();
+    let mut library = LocalLibrary::load(&path)?;
+    library.create_collection(name)?;
+    library.save(&path)?;
+    println!("Created collection '{name}'.");
+    Ok(())
+}
+
+pub async fn collection_rename(old: &str, new: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let path = library_path();
+    let mut library = LocalLibrary::load(&path)?;
+    library.rename_collection(old, new)?;
+    library.save(&path)?;
+    println!("Renamed collection '{old}' to '{new}'.");
+    Ok(())
+}
+
+pub async fn collection_delete(name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let path = library_path();
+    let mut library = LocalLibrary::load(&path)?;
+    library.delete_collection(name);
+    library.save(&path)?;
+    println!("Deleted collection '{name}'.");
+    Ok(())
+}
+
+pub async fn collection_add_book(name: &str, key: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let path = library_path();
+    let mut library = LocalLibrary::load(&path)?;
+    library.add_book_to_collection(name, key)?;
+    library.save(&path)?;
+    println!("Added '{key}' to collection '{name}'.");
+    Ok(())
+}
+
+pub async fn collection_remove_book(
+    name: &str,
+    key: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let path = library_path();
+    let mut library = LocalLibrary::load(&path)?;
+    library.remove_book_from_collection(name, key)?;
+    library.save(&path)?;
+    println!("Removed '{key}' from collection '{name}'.");
+    Ok(())
+}

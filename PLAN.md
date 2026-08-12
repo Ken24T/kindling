@@ -162,11 +162,18 @@ Collections on modern Kindle firmware (12th-gen, 5.19.x) are cloud-synced “Ama
 Collections”, not the older USB-managed local collections. §12 of the instructions flags
 this as potentially difficult/unreliable over USB/MTP.
 
-**Outcome of the read-only investigation (2026-08-12):** the full `system/` tree was
-walked over MTP on the physical Paperwhite (all subfolders descended; only unrelated DBs
-found — search index, device profiles, annotations, FreeTime, fmcache, vocabulary, sync).
-No `collections.json`/`collections.db`/`collection.*` exists on the device, so **Amazon
-Collections have no MTP-reachable local representation**. Conclusion:
+**Outcome of the read-only investigation (2026-08-12):** exhaustively deep-verified on the
+physical Paperwhite — the full `system/` tree was walked; every SQLite DB (incl. the empty
+cloud-sync `fastSyncDB`), the plaintext search index, per-book `.sdr/.mf`/`.meta` sidecar
+metadata, and KFX book metadata were downloaded and scanned for collection strings
+(zero hits; the search index provably contains plaintext book titles, so collection names
+would have been visible). A **live sync-trigger test** (real collection created on the
+device UI over Wi-Fi) confirmed even an active sync leaves nothing usable on the
+USB-visible partition — only UI telemetry (the collection's UUID) in `fMcache.db`, never
+the name or membership. A **LAN port scan** (device awake on Wi-Fi) confirmed the stock
+device exposes **no listening services** — it is a pure cloud client, so there is no Wi-Fi
+service to query either. No `collections.json`/`collections.db`/`collection.*` exists
+anywhere, so **Amazon Collections have no MTP-reachable local representation**. Conclusion:
 
 - **Do not** design collection CRUD into the model, UI, or local library schema.
 - **Collections are out of scope for the USB transport** unless a Wi-Fi/cloud path is

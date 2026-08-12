@@ -10,6 +10,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use super::collections::LocalCollection;
 use crate::inventory::{Book, BookFormat, KindleInventory};
 
 /// Whether a book lives on the attached device, in the local library, or both.
@@ -44,6 +45,10 @@ pub struct LibraryRecord {
 pub struct LocalLibrary {
     pub version: u32,
     pub records: Vec<LibraryRecord>,
+    /// User-authored local collections (see `collections` module).
+    /// `default` keeps older library files (without the field) loadable.
+    #[serde(default)]
+    pub collections: Vec<LocalCollection>,
 }
 
 impl LocalLibrary {
@@ -56,6 +61,7 @@ impl LocalLibrary {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(LocalLibrary {
                 version: Self::CURRENT_VERSION,
                 records: Vec::new(),
+                collections: Vec::new(),
             }),
             Err(error) => Err(LibraryError::Io(error)),
         }
@@ -155,6 +161,9 @@ fn record_from_book(book: &Book, key: String, device_serial: Option<&str>) -> Li
 pub enum LibraryError {
     Io(std::io::Error),
     Json(serde_json::Error),
+    EmptyCollectionName,
+    CollectionExists(String),
+    CollectionNotFound(String),
 }
 
 impl std::fmt::Display for LibraryError {
@@ -162,6 +171,13 @@ impl std::fmt::Display for LibraryError {
         match self {
             LibraryError::Io(error) => write!(f, "local library I/O error: {error}"),
             LibraryError::Json(error) => write!(f, "local library JSON error: {error}"),
+            LibraryError::EmptyCollectionName => write!(f, "collection name must not be empty"),
+            LibraryError::CollectionExists(name) => {
+                write!(f, "collection '{name}' already exists")
+            }
+            LibraryError::CollectionNotFound(name) => {
+                write!(f, "collection '{name}' not found")
+            }
         }
     }
 }
@@ -243,5 +259,80 @@ mod tests {
 
         library.remove("A");
         assert!(library.lookup("A").is_none());
+    }
+
+    #[test]
+    fn create_collection_rejects_blank_and_duplicates() {
+        let mut library = LocalLibrary::default();
+        assert!(matches!(
+            library.create_collection("   "),
+            Err(LibraryError::EmptyCollectionName)
+        ));
+        library.create_collection("Favourites").unwrap();
+        assert!(matches!(
+            library.create_collection("Favourites"),
+            Err(LibraryError::CollectionExists(_))
+        ));
+        assert_eq!(library.collections.len(), 1);
+    }
+
+    #[test]
+    fn collection_add_and_remove_book_dedupe() {
+        let mut library = LocalLibrary::default();
+        library.create_collection("Favourites").unwrap();
+
+        library
+            .add_book_to_collection("Favourites", "JX7VYKM3IPBSUZSDGADVUXVLCVHECJD2")
+            .unwrap();
+        library
+            .add_book_to_collection("Favourites", "JX7VYKM3IPBSUZSDGADVUXVLCVHECJD2")
+            .unwrap();
+
+        assert_eq!(library.collection("Favourites").unwrap().book_keys.len(), 1);
+
+        library
+            .remove_book_from_collection("Favourites", "JX7VYKM3IPBSUZSDGADVUXVLCVHECJD2")
+            .unwrap();
+        assert!(
+            library
+                .collection("Favourites")
+                .unwrap()
+                .book_keys
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn collection_ops_require_existing_collection() {
+        let mut library = LocalLibrary::default();
+        assert!(matches!(
+            library.add_book_to_collection("Missing", "KEY"),
+            Err(LibraryError::CollectionNotFound(_))
+        ));
+        assert!(matches!(
+            library.remove_book_from_collection("Missing", "KEY"),
+            Err(LibraryError::CollectionNotFound(_))
+        ));
+    }
+
+    #[test]
+    fn rename_and_delete_collection() {
+        let mut library = LocalLibrary::default();
+        library.create_collection("Old Name").unwrap();
+        library.rename_collection("Old Name", "New Name").unwrap();
+        assert!(library.collection("New Name").is_some());
+        assert!(library.collection("Old Name").is_none());
+
+        library.delete_collection("New Name");
+        assert!(library.collections.is_empty());
+    }
+
+    #[test]
+    fn old_library_json_without_collections_still_loads() {
+        // A pre-collections library file must deserialize with an empty list.
+        let json = r#"{"version":1,"records":[{"key":"A","title":"A","format":"KFX","size_bytes":1,"local_path":null,"on_device":false,"last_seen_device":null}]}"#;
+        let library: LocalLibrary = serde_json::from_str(json).unwrap();
+        assert!(library.collections.is_empty());
+        assert_eq!(library.records.len(), 1);
     }
 }
