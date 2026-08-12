@@ -291,6 +291,7 @@ pub(crate) mod test_support {
             format: BookFormat::Kfx,
             size_bytes: 1_000,
             local_path: Some(format!("/books/{title}.kfx")),
+            cover_path: None,
             on_device: status == BookStatus::Both,
             last_seen_device: None,
         });

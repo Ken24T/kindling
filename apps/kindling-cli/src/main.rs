@@ -130,6 +130,7 @@ fn main() {
                     }
                 },
                 Some("collections") => block_on(commands::list_collections()),
+                Some("covers") => block_on(commands::scan_covers_cmd()),
                 Some("collection") => {
                     let mut sub = args;
                     match (sub.next().as_deref(), sub.next(), sub.next()) {

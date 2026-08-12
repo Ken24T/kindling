@@ -23,6 +23,19 @@ fn profile_path() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("profiles.json"))
 }
 
+/// Directory holding user-supplied cover images (`<key>.<ext>`).
+fn covers_dir() -> PathBuf {
+    if let Some(path) = std::env::var_os("KINDLING_LIBRARY_DIR") {
+        return PathBuf::from(path).join("covers");
+    }
+    if let Some(path) = std::env::var_os("KINDLING_STATE_DIR") {
+        return PathBuf::from(path).join("library").join("covers");
+    }
+    directories::ProjectDirs::from("", "", "kindling")
+        .map(|dirs| dirs.data_local_dir().join("library").join("covers"))
+        .unwrap_or_else(|| PathBuf::from("library/covers"))
+}
+
 fn status_label(record: &LibraryRecord) -> &'static str {
     match (record.on_device, record.local_path.is_some()) {
         (true, true) => "both",
@@ -125,12 +138,27 @@ pub async fn add_library(path: &str) -> Result<(), Box<dyn std::error::Error>> {
         format,
         size_bytes,
         local_path: Some(path.to_owned()),
+        cover_path: None,
         on_device: false,
         last_seen_device: None,
     });
     library.save(&library_path)?;
 
     println!("Added '{file_name}' to the local library.");
+    Ok(())
+}
+
+pub async fn scan_covers_cmd() -> Result<(), Box<dyn std::error::Error>> {
+    let path = library_path();
+    let mut library = LocalLibrary::load(&path)?;
+    let covers = covers_dir();
+    let changed = library.scan_covers(&covers)?;
+    library.save(&path)?;
+    println!(
+        "Scanned covers in {} — {} records updated.",
+        covers.display(),
+        changed
+    );
     Ok(())
 }
 

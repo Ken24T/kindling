@@ -3,12 +3,13 @@
 //! Each card is a `mouse_area` whose press starts a drag (`DragStarted`);
 //! the surrounding pane handles the release/drop (see `view::book_pane`).
 
+use iced::widget::image::{Handle, Image};
 use iced::widget::{Grid, column, container, mouse_area, scrollable, text};
-use iced::{Color, Element, Length, mouse};
+use iced::{Color, ContentFit, Element, Length, mouse};
 
 use kindred::BookStatus;
 
-use crate::model::{AppState, Message, Pane};
+use crate::model::{AppState, BookEntry, Message, Pane};
 
 use super::theme::{card_style, cover_color};
 use super::{COVER_HEIGHT, COVER_WIDTH};
@@ -43,20 +44,9 @@ fn cover_card<'a>(state: &'a AppState, pane: Pane, index: usize) -> Element<'a, 
     let selected = state.selected == Some(index);
     let dragging = state.drag.is_some_and(|drag| drag.index == index);
 
-    let cover = container(
-        text(first_letter(&entry.title))
-            .size(28)
-            .color(Color::WHITE),
-    )
-    .width(Length::Fixed(COVER_WIDTH))
-    .height(Length::Fixed(COVER_HEIGHT))
-    .center_x(Length::Fill)
-    .center_y(Length::Fill)
-    .style(|_| container::Style::default().background(cover_color(&entry.title)));
-
     let card = container(
         column![
-            cover,
+            cover(entry),
             text(&entry.title).size(11),
             status_badge(entry.status),
         ]
@@ -69,6 +59,37 @@ fn cover_card<'a>(state: &'a AppState, pane: Pane, index: usize) -> Element<'a, 
         .on_press(Message::DragStarted { pane, index })
         .interaction(mouse::Interaction::Pointer)
         .into()
+}
+
+/// The cover artwork: the user-supplied image when one exists, else a
+/// pastel letter placeholder.
+fn cover(entry: &BookEntry) -> Element<'static, Message> {
+    let path = entry
+        .local
+        .as_ref()
+        .and_then(|record| record.cover_path.as_deref());
+
+    match path {
+        Some(path) if std::path::Path::new(path).is_file() => Image::new(Handle::from_path(path))
+            .width(Length::Fixed(COVER_WIDTH))
+            .height(Length::Fixed(COVER_HEIGHT))
+            .content_fit(ContentFit::Cover)
+            .into(),
+        _ => {
+            let color = cover_color(&entry.title);
+            container(
+                text(first_letter(&entry.title))
+                    .size(28)
+                    .color(Color::WHITE),
+            )
+            .width(Length::Fixed(COVER_WIDTH))
+            .height(Length::Fixed(COVER_HEIGHT))
+            .center_x(Length::Fill)
+            .center_y(Length::Fill)
+            .style(move |_| container::Style::default().background(color))
+            .into()
+        }
+    }
 }
 
 fn status_badge(status: BookStatus) -> Element<'static, Message> {

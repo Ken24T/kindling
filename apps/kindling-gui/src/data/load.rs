@@ -5,7 +5,7 @@ use kindred::{
     inventory_device,
 };
 
-use crate::data::paths::{library_path, profile_path};
+use crate::data::paths::{covers_dir, library_path, profile_path};
 use crate::model::DeviceInfo;
 
 /// Result of a full refresh: attached-device identity, device inventory,
@@ -28,6 +28,7 @@ pub async fn load_all() -> LoadResult {
     let inventory = load_inventory(&identity, &mut errors).await;
     let mut library = load_library(&mut errors);
     reconcile_and_save(&mut library, &inventory, &identity, &mut errors);
+    scan_covers_and_save(&mut library, &mut errors);
 
     LoadResult {
         device: identity.map(into_device_info),
@@ -88,6 +89,17 @@ fn reconcile_and_save(
         return;
     };
     library.reconcile(inventory, identity.serial.as_deref());
+    if let Err(error) = library.save(&library_path()) {
+        errors.push(format!("library save: {error}"));
+    }
+}
+
+/// Match user-supplied cover images to records, saving quietly on success.
+fn scan_covers_and_save(library: &mut LocalLibrary, errors: &mut Vec<String>) {
+    if let Err(error) = library.scan_covers(&covers_dir()) {
+        errors.push(format!("covers scan: {error}"));
+        return;
+    }
     if let Err(error) = library.save(&library_path()) {
         errors.push(format!("library save: {error}"));
     }

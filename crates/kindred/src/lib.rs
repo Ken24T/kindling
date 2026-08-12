@@ -1,4 +1,5 @@
 mod collections;
+mod covers;
 mod error;
 mod inventory;
 mod library;

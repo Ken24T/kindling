@@ -34,6 +34,9 @@ pub struct LibraryRecord {
     pub size_bytes: u64,
     /// Local path of the book file when a local copy exists.
     pub local_path: Option<String>,
+    /// Local path of a cover image supplied by the user (see `scan_covers`).
+    #[serde(default)]
+    pub cover_path: Option<String>,
     /// Last known presence on an attached device.
     pub on_device: bool,
     /// Serial of the device last seen holding this book.
@@ -152,6 +155,7 @@ fn record_from_book(book: &Book, key: String, device_serial: Option<&str>) -> Li
         format: book.format,
         size_bytes: book.size_bytes,
         local_path: None,
+        cover_path: None,
         on_device: true,
         last_seen_device: device_serial.map(str::to_owned),
     }
@@ -207,6 +211,7 @@ mod tests {
             format: BookFormat::Kfx,
             size_bytes: 100,
             local_path: local.then(|| format!("/books/{key}.kfx")),
+            cover_path: None,
             on_device,
             last_seen_device: None,
         }

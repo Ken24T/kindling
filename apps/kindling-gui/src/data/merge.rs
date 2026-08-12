@@ -109,6 +109,7 @@ mod tests {
             format: BookFormat::Kfx,
             size_bytes: 1_000,
             local_path: local.map(str::to_owned),
+            cover_path: None,
             on_device: false,
             last_seen_device: None,
         }

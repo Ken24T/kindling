@@ -53,6 +53,7 @@ async fn record_copied_book(book: &Book, dest: &Path) -> Result<(), String> {
         format: book.format,
         size_bytes: book.size_bytes,
         local_path: Some(dest.to_string_lossy().into_owned()),
+        cover_path: None,
         on_device: true,
         last_seen_device: None,
     });

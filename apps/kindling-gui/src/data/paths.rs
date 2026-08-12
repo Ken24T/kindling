@@ -27,3 +27,8 @@ pub fn library_dir() -> PathBuf {
     }
     state_dir().join("library")
 }
+
+/// Directory holding user-supplied cover images (`<key>.<ext>`).
+pub fn covers_dir() -> PathBuf {
+    library_dir().join("covers")
+}
