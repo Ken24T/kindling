@@ -12,6 +12,7 @@ mod transfer;
 
 pub use collections::{
     add_book_to_collection, create_collection, delete_collection, remove_book_from_collection,
+    rename_collection,
 };
 pub use load::{LoadResult, load_all};
 pub use merge::build_catalogue;

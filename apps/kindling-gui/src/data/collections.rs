@@ -21,6 +21,18 @@ pub async fn create_collection(name: String) -> Result<String, String> {
     Ok(format!("Created collection '{name}'."))
 }
 
+/// Rename a collection; returns a user-facing status summary.
+pub async fn rename_collection(old: String, new: String) -> Result<String, String> {
+    let mut library = LocalLibrary::load(&library_path()).map_err(|error| error.to_string())?;
+    library
+        .rename_collection(&old, &new)
+        .map_err(|error| error.to_string())?;
+    library
+        .save(&library_path())
+        .map_err(|error| error.to_string())?;
+    Ok(format!("Renamed collection '{old}' to '{new}'."))
+}
+
 /// Delete a collection (its books stay in the library); returns a summary.
 pub async fn delete_collection(name: String) -> Result<String, String> {
     let mut library = LocalLibrary::load(&library_path()).map_err(|error| error.to_string())?;

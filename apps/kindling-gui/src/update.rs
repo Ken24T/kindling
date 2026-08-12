@@ -32,6 +32,10 @@ pub enum Message {
     CollectionNameChanged(String),
     ShowNewCollection,
     CollectionDelete(usize),
+    CollectionRenameStart(usize),
+    CollectionRenameNameChanged(String),
+    CollectionRenameSave,
+    CollectionRenameCancel,
     CollectionRemoveBook { index: usize },
     CollectionChanged(Box<Result<String, String>>),
 }
@@ -127,6 +131,39 @@ pub fn update(state: &mut AppState, message: Message) -> Task<Message> {
                 state.selected_collection = None;
             }
             collection_changed_task(data::delete_collection(name))
+        }
+        Message::CollectionRenameStart(index) => {
+            let name = state
+                .collections
+                .get(index)
+                .map(|collection| collection.name.clone())
+                .unwrap_or_default();
+            state.renaming_collection = Some(index);
+            state.rename_input = name;
+            Task::none()
+        }
+        Message::CollectionRenameNameChanged(name) => {
+            state.rename_input = name;
+            Task::none()
+        }
+        Message::CollectionRenameSave => {
+            let Some(index) = state.renaming_collection else {
+                return Task::none();
+            };
+            let Some(collection) = state.collections.get(index) else {
+                return Task::none();
+            };
+            let old = collection.name.clone();
+            let new = state.rename_input.trim().to_owned();
+            state.renaming_collection = None;
+            if new.is_empty() || new == old {
+                return Task::none();
+            }
+            collection_changed_task(data::rename_collection(old, new))
+        }
+        Message::CollectionRenameCancel => {
+            state.renaming_collection = None;
+            Task::none()
         }
         Message::CollectionRemoveBook { index } => {
             let Some(collection_index) = state.selected_collection else {
@@ -383,5 +420,48 @@ mod tests {
 
         apply(&mut state, Message::CollectionDelete(0));
         assert_eq!(state.selected_collection, None);
+    }
+
+    #[test]
+    fn collection_rename_start_prefills_and_save_clears() {
+        let mut state = state();
+        state.collections = vec![kindred::LocalCollection {
+            name: "Favourites".to_owned(),
+            book_keys: vec![],
+        }];
+
+        apply(&mut state, Message::CollectionRenameStart(0));
+        assert_eq!(state.renaming_collection, Some(0));
+        assert_eq!(state.rename_input, "Favourites");
+
+        apply(
+            &mut state,
+            Message::CollectionRenameNameChanged("Faves".to_owned()),
+        );
+        apply(&mut state, Message::CollectionRenameSave);
+        assert_eq!(state.renaming_collection, None);
+    }
+
+    #[test]
+    fn collection_rename_blank_or_unchanged_is_no_op() {
+        let mut state = state();
+        state.collections = vec![kindred::LocalCollection {
+            name: "Favourites".to_owned(),
+            book_keys: vec![],
+        }];
+
+        // Unchanged name: save just exits rename mode.
+        apply(&mut state, Message::CollectionRenameStart(0));
+        apply(
+            &mut state,
+            Message::CollectionRenameNameChanged("Favourites".to_owned()),
+        );
+        apply(&mut state, Message::CollectionRenameSave);
+        assert_eq!(state.renaming_collection, None);
+
+        // Cancel path exits rename mode too.
+        apply(&mut state, Message::CollectionRenameStart(0));
+        apply(&mut state, Message::CollectionRenameCancel);
+        assert_eq!(state.renaming_collection, None);
     }
 }

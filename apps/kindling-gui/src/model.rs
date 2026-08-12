@@ -164,6 +164,10 @@ pub struct AppState {
     pub new_collection_name: String,
     /// Whether the inline "new collection" input is visible.
     pub show_new_collection: bool,
+    /// Collection index currently being renamed (inline input visible).
+    pub renaming_collection: Option<usize>,
+    /// Inline "rename collection" input value.
+    pub rename_input: String,
 }
 
 impl Default for AppState {
@@ -182,6 +186,8 @@ impl Default for AppState {
             selected_collection: None,
             new_collection_name: String::new(),
             show_new_collection: false,
+            renaming_collection: None,
+            rename_input: String::new(),
         }
     }
 }

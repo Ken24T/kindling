@@ -73,18 +73,38 @@ fn collection_row(state: &AppState, selection: Option<usize>) -> Element<'_, Mes
 
     match selection {
         Some(index) => {
+            let renaming = state.renaming_collection == Some(index);
             let mut select = button(text(label).size(12))
                 .on_press(Message::CollectionSelected(Some(index)))
                 .width(Length::Fill);
             if active {
                 select = select.style(active_section_style);
             }
+
+            let main: Element<'_, Message> = if renaming {
+                row![
+                    text_input(&state.rename_input, "Name")
+                        .on_input(Message::CollectionRenameNameChanged)
+                        .on_submit(Message::CollectionRenameSave),
+                    button(text("✓").size(11)).on_press(Message::CollectionRenameSave),
+                ]
+                .spacing(2)
+                .into()
+            } else {
+                select.into()
+            };
+
             // Collections are drag-drop targets, so the whole row is a
-            // mouse_area; the ✕ button only deletes on a direct press.
+            // mouse_area; the ✎/✕ buttons only act on a direct press.
             mouse_area(
                 row![
-                    select,
-                    button(text("✕").size(11)).on_press(Message::CollectionDelete(index))
+                    main,
+                    if renaming {
+                        button(text("Cancel").size(10)).on_press(Message::CollectionRenameCancel)
+                    } else {
+                        button(text("✎").size(11)).on_press(Message::CollectionRenameStart(index))
+                    },
+                    button(text("✕").size(11)).on_press(Message::CollectionDelete(index)),
                 ]
                 .spacing(2),
             )
