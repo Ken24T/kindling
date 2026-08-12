@@ -11,6 +11,7 @@ fn usage() {
     eprintln!("  mtp-root        List the root objects of each MTP storage");
     eprintln!("  mtp-documents   List the contents of the root documents folder");
     eprintln!("  mtp-folder <h>  List the contents of a folder by MTP handle");
+    eprintln!("  mtp-getfile <h> <dest>  Download an object by MTP handle to a local file");
     eprintln!("  inventory       List the device library as books");
     eprintln!("  mtp-write-test  Run the controlled upload/readback/cleanup test");
     eprintln!("  copy-book <a> <d>  Copy a book (by ASIN) to a local directory");
@@ -43,6 +44,23 @@ fn main() {
                 }
             };
             block_on(commands::mtp_folder(handle))
+        }
+        Some("mtp-getfile") => {
+            let mut args = std::env::args().skip(2);
+            let (handle, dest) = match (args.next(), args.next()) {
+                (Some(handle), Some(dest)) => match handle.parse::<u64>() {
+                    Ok(handle) => (handle, dest),
+                    Err(_) => {
+                        eprintln!("Usage: kindling-cli mtp-getfile <handle> <dest>");
+                        std::process::exit(1);
+                    }
+                },
+                _ => {
+                    eprintln!("Usage: kindling-cli mtp-getfile <handle> <dest>");
+                    std::process::exit(1);
+                }
+            };
+            block_on(commands::mtp_getfile(handle, &dest))
         }
         Some("inventory") => block_on(commands::inventory()),
         Some("mtp-write-test") => block_on(commands::mtp_write_test()),

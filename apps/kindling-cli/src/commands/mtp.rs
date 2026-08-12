@@ -1,4 +1,7 @@
-use kindred::{list_documents, list_folder_children, list_storage_roots, probe_first_mtp_device};
+use kindred::{
+    download_object, list_documents, list_folder_children, list_storage_roots,
+    probe_first_mtp_device,
+};
 
 pub async fn mtp_probe() -> Result<(), Box<dyn std::error::Error>> {
     let probe = probe_first_mtp_device().await?;
@@ -88,5 +91,16 @@ pub async fn mtp_folder(handle: u64) -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    Ok(())
+}
+
+/// Download an object's bytes by handle to a local file (read-only).
+pub async fn mtp_getfile(handle: u64, dest: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let bytes = download_object(handle).await?;
+    std::fs::write(dest, &bytes)?;
+    println!(
+        "Downloaded handle {handle} ({} bytes) to {dest}",
+        bytes.len()
+    );
     Ok(())
 }

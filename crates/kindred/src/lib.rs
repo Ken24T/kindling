@@ -17,7 +17,8 @@ pub use manage::{add_book_to_kindle, copy_book_from_kindle, remove_added_object,
 
 pub use mtp::{
     MtpDocumentsListing, MtpObjectSummary, MtpProbe, MtpStorageListing, MtpStorageSummary,
-    list_documents, list_folder_children, list_storage_roots, probe_first_mtp_device,
+    download_object, list_documents, list_folder_children, list_storage_roots,
+    probe_first_mtp_device,
 };
 
 pub use profile::{DeviceIdentity, DeviceProfile, ProfileError, ProfileStore, identify_attached};

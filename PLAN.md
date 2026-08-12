@@ -156,18 +156,24 @@ App-layer plan:
   real `inventory_device` + `LocalLibrary` wiring, list/details view modes.
 - CI: ubuntu job installs `libxkbcommon-dev libwayland-dev libgtk-3-dev` for iced/winit.
 
-## Kindle Collections — investigation only (2026-08-12)
+## Kindle Collections — investigation RESOLVED (2026-08-12)
 
 Collections on modern Kindle firmware (12th-gen, 5.19.x) are cloud-synced “Amazon
 Collections”, not the older USB-managed local collections. §12 of the instructions flags
 this as potentially difficult/unreliable over USB/MTP.
 
-- **Do not** design collection CRUD into the model, UI, or local library schema now.
-- **Future read-only investigation:** inspect the `system` area over MTP for collection
-  metadata on the physical device. If none is exposed, collections are out of scope for
-  the USB transport unless a Wi-Fi/cloud path is later built (separate future transport).
-- If the investigation finds usable local collection data, read-only display is the
-  realistic ceiling; conservative CRUD would require a further device-evidence pass.
+**Outcome of the read-only investigation (2026-08-12):** the full `system/` tree was
+walked over MTP on the physical Paperwhite (all subfolders descended; only unrelated DBs
+found — search index, device profiles, annotations, FreeTime, fmcache, vocabulary, sync).
+No `collections.json`/`collections.db`/`collection.*` exists on the device, so **Amazon
+Collections have no MTP-reachable local representation**. Conclusion:
+
+- **Do not** design collection CRUD into the model, UI, or local library schema.
+- **Collections are out of scope for the USB transport** unless a Wi-Fi/cloud path is
+  later built (separate future transport).
+- The GUI left-pane section model remains data-driven, so a future Collections section
+  can slot in only if a usable data source appears later.
+- Details: `docs/device/README.md` §3 (resolved note) and §5 (versioned unknowns).
 
 ## Device evidence base (from Milestones 2B/2C, 2026-08-12)
 

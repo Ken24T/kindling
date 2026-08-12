@@ -152,3 +152,18 @@ pub async fn list_folder_children(handle: u64) -> Result<Option<MtpStorageListin
         objects: children.into_iter().map(MtpObjectSummary::from).collect(),
     }))
 }
+
+/// Download an object's raw bytes by MTP handle (read-only diagnostic).
+///
+/// Opens the first device, downloads the object, and returns its bytes.
+/// Useful for inspecting device metadata files; never modifies the device.
+pub async fn download_object(handle: u64) -> Result<Vec<u8>, KindredError> {
+    let device = MtpDevice::open_first().await?;
+    let mut storages = device.storages().await?;
+    let storage = storages.pop().ok_or(KindredError::NoDevice)?;
+
+    storage
+        .download_to_vec(mtp_rs::mtp::ObjectHandle(handle))
+        .await
+        .map_err(KindredError::from)
+}

@@ -116,14 +116,34 @@ name at runtime; handle numbers are session-local.
 system/
 ├── version.txt                    ← "Kindle 5.19.5 (479431058)" — firmware source of truth
 ├── thumbnails/                    ← cover/thumbnail cache — see File type catalog
-├── bookcovers/                    [verified] one hash-named subdir; contents not descended
+│   └── recommendation/            [verified] nested author/asin recommendation dirs
+├── bookcovers/<28-hex>/           [verified] account-hash subdir; empty at capture
 ├── grok_thumbnails/               [verified] empty at capture (grok/AI feature cache?)
+├── cmm/home/                      ← store cover cache: `<ASIN>._UX230_...jpg` (230px) + a Send-to-Kindle graphic
+├── ksdk/                          ← profiles.db (SQLite: ActiveProfile/Avatars/PCA_Profiles/HH_Profiles) + profiles_avatars/ + .annotations/
+├── .annotations/amzn1.account.<id>/  ← ksdk_annotation_v1.db (annotations/notes DB); also a FILE_SYSTEM_ACCESSIBILITY_FLAG here
+├── freetime/                      ← freetime.db (Amazon Kids)
+├── fmcache/                       ← fmcache.db (file-manager cache)
+├── vocabulary/                    ← vocab.db
+├── Search Indexes/                ← Index.db + Index.lg + `y*` term files (custom search index, not SQLite)
+├── .fastSync_v1/                  ← fastSyncDB
+├── .fastsync_cache/               ← sync_status
 ├── readingstreams/, wmtlogs/, btlogs/, userannotlogsDir/   ← log areas
-├── freetime/, startactions/, recommendation/               ← firmware feature areas
-├── Search Indexes/, CloudIndices/, .fastSync_v1/, .fastsync_cache/, fmcache/, cmm/, kll/, ksdk/, vocabulary/, pdf/, preloader/, acw/
+├── startactions/images/           [verified] empty at capture
+├── recommendation/                [verified] asinRecommendations/, authorRecommendations/
+├── CloudIndices/, kll/, pdf/, preloader/, acw/             [verified] empty at capture
 ├── AudibleJit.sys, AudibleActivation.sys                   ← audible activation state
 └── fonts/
 ```
+
+### Kindle Collections — NOT exposed over MTP (resolved 2026-08-12)
+
+A full read-only walk of `system/` (all subfolders descended) found **no collections
+metadata**: no `collections.json`, `collections.db`, or `collection.*` anywhere. The only
+databases present are unrelated (search index, device profiles, annotations, FreeTime/Kids,
+file-manager cache, vocabulary, sync DB). Modern firmware keeps Amazon Collections
+cloud-synced with no local MTP-reachable representation. **Collections are out of scope for
+the USB transport.**
 
 ### `documents/` detail
 
@@ -155,6 +175,14 @@ Per-book and device file types observed on the device. `[verified, 5.19.5]`.
 | `version.txt` | `system/` | firmware version string | — |
 | `thumbnail_<ASIN>_EBOK_portrait.jpg` | `system/thumbnails/` | store-book cover thumbnail — **actually GIF89a, 60×40, despite `.jpg` extension** | cover pixels, tiny |
 | `thumbnail_<hash>.jpg` | `system/thumbnails/` | sideloaded-book cover thumbnail (opaque 6-char hash name) | cover pixels, tiny; hash→book mapping unknown |
+| `<ASIN>._UX230_...jpg` | `system/cmm/home/` | **store cover cache at 230px** (classic-ASIN-keyed), plus one `AwarenessCard_*` PNG | cover pixels, 230px — better than thumbnails/ |
+| `profiles.db` | `system/ksdk/` | SQLite device user profiles (ActiveProfile, Avatars, PCA_Profiles, HH_Profiles) | no book/collection data |
+| `ksdk_annotation_v1.db` | `system/.annotations/amzn1.account.<id>/` | SQLite annotations/notes DB | notes/highlights only |
+| `freetime.db` | `system/freetime/` | Amazon Kids (FreeTime) DB | — |
+| `fMcache.db` | `system/fmcache/` | file-manager cache DB | — |
+| `vocab.db` | `system/vocabulary/` | vocabulary DB | — |
+| `Index.db` / `Index.lg` / `y*` | `system/Search Indexes/` | custom (non-SQLite) full-text search index | — |
+| `fastSyncDB` / `sync_status` | `system/.fastSync_v1/`, `.fastsync_cache/` | sync state | — |
 | `FILE_SYSTEM_ACCESSIBILITY_FLAG` | root | 16 bytes, blank content | semantics unknown |
 | `driveinfo.calibre` | root | JSON calibre state (device_store_uuid, device_name, location_code, last_library_uuid, calibre_version, date_last_connected, mtp_prefix) | calibre-private; **do not depend** |
 | `metadata.calibre` | root | JSON array of book records (title, authors, languages, size, lpath…) for calibre-managed books only | real titles/authors **but only for calibre-managed books**; **do not depend** (§12) |
@@ -163,17 +191,19 @@ Per-book and device file types observed on the device. `[verified, 5.19.5]`.
 
 ### Cover availability (important for the UI roadmap)
 
-Covers **do** exist on the device, in `system/thumbnails/` — not per-book in sidecars.
-Two naming schemes:
+Covers **do** exist on the device, in `system/thumbnails/` and `system/cmm/home/` — not
+per-book in sidecars. Three sources:
 
-- `thumbnail_<ASIN>_EBOK_portrait.jpg` — store books keyed by **classic 10-char ASIN**
-  (e.g. `B00KAJJRIM`). Note these are classic ASINs; the 58 `Items01/` books mostly use
-  32-char hex ids, so the thumbnail cache may cover a different (store) set.
-- `thumbnail_<hash>.jpg` — sideloaded books keyed by an opaque 6-char hash; the
-  hash→book mapping is **unknown** (open question).
+- `thumbnail_<ASIN>_EBOK_portrait.jpg` (`system/thumbnails/`) — store books keyed by
+  **classic 10-char ASIN** (e.g. `B00KAJJRIM`). Classic ASINs; the 58 `Items01/` books
+  mostly use 32-char hex ids, so this cache may cover a different (store) set.
+- `thumbnail_<hash>.jpg` (`system/thumbnails/`) — sideloaded books keyed by an opaque
+  6-char hash; the hash→book mapping is **unknown** (open question).
+- `<ASIN>._UX230_...jpg` (`system/cmm/home/`) — **store cover cache at 230px**, keyed by
+  classic ASIN. Higher resolution than thumbnails/, but same classic-ASIN caveat.
 
-Thumbnails are tiny (60×40) GIFs in `.jpg` clothing — fine as e-ink previews, not as
-high-res covers.
+`system/thumbnails/` images are tiny (60×40) GIFs in `.jpg` clothing — fine as e-ink
+previews, not as high-res covers. The `cmm/home/` cache is the better store-cover source.
 
 ---
 
@@ -183,21 +213,19 @@ high-res covers.
 
 - **`FILE_SYSTEM_ACCESSIBILITY_FLAG`** — present, 16 bytes, blank. Semantics unknown.
   Do not treat as a book.
-- **Kindle Collections** — modern firmware uses cloud-synced "Amazon Collections", not
-  USB-managed local collections. No on-device collection metadata found yet; likely not
-  manageable over MTP. Read-only investigation candidate: `system/`.
 - **Sideloaded thumbnail hash** — how `thumbnail_<hash>.jpg` maps to a book is unknown;
   a future investigation could correlate with ASIN/title hashes to enrich the library
   with covers.
-- **`bookcovers/<28-hex>/`** — one hash-named subdir observed; contents not descended.
 - **`grok_thumbnails/`** — empty at capture; purpose (grok/AI features) unconfirmed.
-- **`system/` subfolders** (`readingstreams`, `freetime`, `recommendation`,
-  `CloudIndices`, `Search Indexes`, `kll`, `ksdk`, `cmm`, `acw`, `preloader`, …) —
-  names observed; semantics not investigated. Treat as firmware internals, do not modify.
 - **`.cache/kf8/`** — MD5-named files; purpose inferred as reading/font caches.
 - **`voice/`** — TTS voice-pack directories; contents not descended.
 - **Firmware updates** — all `[5.19.5]` facts are suspect after a firmware update;
   re-verify before relying on them.
+
+Resolved 2026-08-12 (Collections investigation): **Kindle Collections are not exposed
+over MTP** — full `system/` walk found no collection metadata (see §3). Out of scope for
+the USB transport. `bookcovers/<28-hex>/` and the `system/` subfolders are now
+individually catalogued (see §3 tree); none held collections data.
 
 ---
 
@@ -225,6 +253,8 @@ From project instructions §12:
 
 All `[verified]` facts above were captured on **2026-08-12** against a physical
 Kindle Paperwhite 12th gen, firmware **5.19.5 (479431058)**, via Kindred's `mtp-root`,
-`mtp-documents`, `mtp-folder` commands and `mtp-getfile`/`file`/`strings` inspection.
+`mtp-documents`, `mtp-folder`, `mtp-getfile` commands and `file`/`strings` inspection.
+The `system/` subfolder walk and the Kindle Collections conclusion (§3) were captured with
+the `mtp-folder`/`mtp-getfile` diagnostics (backed by Kindred `download_object`).
 See `.github/copilot-instructions.md` §9 (Milestones 2A–6) for the milestone-by-milestone
 evidence trail and commit references.
