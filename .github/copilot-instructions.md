@@ -592,7 +592,7 @@ All gates green. Commit:
 
 ## 10. Immediate next milestone
 
-> **Status (2026-08-12):** Milestones 2B through 7 are complete — see §9 for the proven device output and **`docs/device/README.md`** for the canonical device-facts wiki (verified-facts reference, firmware-versioned). The error abstraction slice (§17) is also complete — `KindredError` is the unified device-layer error. The remaining roadmap is later product work per §11: the local library, device selection for multiple Kindles, and the GUI/async decisions. The `.mf`/`.yjf` metadata milestone concluded that the per-book device files carry only delivery/caching data (no titles/authors/covers); sidecar metadata-handle association is now real, and covers were found in `system/thumbnails/` (tiny GIFs; sideloaded hash→book mapping still unknown).
+> **Status (2026-08-12):** Milestones 2B through 7 are complete — see §9 for the proven device output and **`docs/device/README.md`** for the canonical device-facts wiki (verified-facts reference, firmware-versioned). The error abstraction slice (§17) is also complete — `KindredError` is the unified device-layer error. The remaining roadmap is later product work per §11: the local library, device selection for multiple Kindles, and the GUI/async decisions (**resolved 2026-08-12: iced** — see PLAN.md). The `.mf`/`.yjf` metadata milestone concluded that the per-book device files carry only delivery/caching data (no titles/authors/covers); sidecar metadata-handle association is now real, and covers were found in `system/thumbnails/` (tiny GIFs; sideloaded hash→book mapping still unknown).
 
 ### Milestone 2B: read-only MTP root enumeration
 
@@ -979,7 +979,7 @@ Current state (2026-08-12):
 - The repo runs the TCTBP staged branch model (§22); work continues on `development`.
 - The Milestone 3 planning session is complete; the agreed scope is recorded in `PLAN.md` (root).
 - Milestones 3, 4 and 5 are complete — see §9 (inventory model, controlled transfer proof, and safe device-management operations).
-- **Next step:** the profile registry (§16, `profile.rs`) and the local JSON library (`library.rs`) slices are complete. The `.mf`/`.yjf` metadata milestone (Milestone 6, §9) is complete — it concluded the device files carry delivery metadata only and wired real sidecar metadata-handle association into the inventory. Error abstraction is next, then the GUI framework decision. The repo is at a stable checkpoint on `development`.
+- **Next step:** the profile registry (§16, `profile.rs`) and the local JSON library (`library.rs`) slices are complete. Milestones 6 and 7 (§9) are complete (sidecar metadata association + device wiki). The error abstraction slice (§17) is complete, and the GUI framework decision is **resolved (2026-08-12: iced)** — recorded in PLAN.md. The next step is the GUI app shell (`apps/kindling-gui`, GUI M1 per PLAN.md). The repo is at a stable checkpoint on `development`.
 
 A good next sequence is:
 

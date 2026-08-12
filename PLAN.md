@@ -67,7 +67,8 @@ attached at a time** — there is no multi-device selection; `open_first()` stay
    Timeout, StorageFull, AccessDenied, PermissionDenied, StaleObject, NotFound,
    InvalidObject, UnsupportedModel); unmapped low-level errors preserved as `Usb`/`Mtp`
    for diagnostics. All device-facing functions now return it.
-6. GUI framework decision (criteria + shortlist) before the app layer.
+6. GUI framework decision — **done** (2026-08-12): **iced** chosen; see
+   “GUI framework decision — RESOLVED” below. Next: the GUI app shell (GUI M1).
 7. Kindle Collections — read-only investigation only (see below).
 
 ## Target UX — Explorer-style library manager (agreed 2026-08-12)
@@ -92,13 +93,51 @@ Finder:
 - **Extensibility:** the left-pane section model is data-driven so a future **Collections**
   section can slot in if the investigation pans out.
 
-### GUI framework decision (due before the app layer)
+### GUI framework decision — RESOLVED: iced (2026-08-12)
 
-The UX above constrains the framework choice: tree/sections, list + grid + thumbnails,
-preview pane, and drag-drop, native-feeling on Windows and Linux. Shortlist to evaluate:
-**Tauri (+ React)** and **egui/eframe**; iced/Slint are viable alternatives. Decide by
-criteria (cross-platform maturity, drag-drop ergonomics, grid/thumbnail support, bundle
-size, native feel) before starting the app layer.
+The UX constrains the framework choice: tree/sections, list + grid + thumbnails, preview
+pane, and drag-drop, native-feeling on Windows and Linux. Shortlist evaluated: **Tauri
+(+ React)**, **egui/eframe**, **iced**, **Slint**. Decision: **iced**.
+
+Why iced:
+
+- **Declarative/retained architecture (Elm model)** fits a stateful, data-driven library
+  manager: `State → View` with a pure `update(message, state)`. Closest Rust analogue to
+  the web/React mental model, and the best trajectory for a "friendly" product UI as
+  features accrue (selection, preview, view modes, drag state, device presence).
+- **Testable by construction:** the pure update function means selection, drag
+  transitions and reconciliation are unit-testable without a device or a window —
+  matching Kindred's testing conventions.
+- **Async is idiomatic:** `Command`/`Subscription` drive Kindred's async MTP futures;
+  device hotplug and transfer progress become a `Subscription` pushing messages. iced
+  brings the app's async runtime (Tokio); the CLI keeps `block_on` as-is.
+- **Retained widgets + `Wrap` and virtualized `Scrollable`** suit cover grids and long
+  lists; `iced_table` covers the sortable details view.
+- **Pure Rust** — same language as Kindred; no webview, no FFI, no second toolchain.
+
+Why not the alternatives:
+
+- **Tauri (+ React):** strongest web-UI power and packaging, but a two-language stack and
+  WebKitGTK variability on Linux. Kept as fallback if the iced spike disappoints.
+- **egui/eframe:** superb iteration speed and community, but immediate mode is the wrong
+  paradigm for a stateful product app — polish and complex state become manual labour.
+  Best reserved for diagnostic/tool UIs (the CLI covers diagnostics).
+- **Slint:** ruled out on licensing (GPLv3 free tier) and DSL friction.
+- **GTK / Qt:** GTK is alien on Windows; Qt adds binding and licensing friction.
+
+Open items to retire with a spike before full commitment:
+
+- Drag-and-drop between Kindling's own panes is custom work in iced (drag state in the
+  Model, rendered drop target, message on drop) — bounded, roughly a day.
+- Cover-grid performance with hundreds of covers — verify virtualization in the spike.
+- Iteration feel vs egui — the spike settles it with evidence.
+
+App-layer plan:
+
+- New workspace member `apps/kindling-gui` — a thin shell over the `kindred` boundary;
+  no device logic in the UI.
+- GUI M1: Explorer shell — left section pane (Local Library / Kindle Library) + right
+  preview pane + cover grid, mock data first, then real `inventory_device` + `LocalLibrary`.
 
 ## Kindle Collections — investigation only (2026-08-12)
 
@@ -157,7 +196,8 @@ Out of scope for M3 (queued):
 - Transfer/copy and removal (Milestones 4/5)
 - Error abstraction (Kindred error enum over `mtp_rs::Error`)
 - Device selection / USB↔MTP correlation for multiple Kindles
-- GUI framework selection + async runtime decision
+- GUI framework selection + async runtime decision — **resolved** (2026-08-12: iced; see
+  the GUI decision section above)
 
 Definition of done for M3:
 
