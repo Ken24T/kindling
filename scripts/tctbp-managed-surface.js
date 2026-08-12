@@ -104,6 +104,7 @@ const ACTIVATION_TRIGGERS = [
   "promote production", "promote production please", "promote prod", "promote prod please",
   "deploy", "deploy please", "deploy dev", "deploy dev please",
   "deploy development", "deploy development please",
+  "deploy review", "deploy review please",
   "deploy staging", "deploy staging please",
   "deploy prod", "deploy prod please", "deploy production", "deploy production please",
   "handover", "handover please", "handover local", "handover local please",

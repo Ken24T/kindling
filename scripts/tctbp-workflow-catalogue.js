@@ -152,6 +152,8 @@ const PUBLIC_WORKFLOWS = [
       "deploy dev please",
       "deploy development",
       "deploy development please",
+      "deploy review",
+      "deploy review please",
       "deploy staging",
       "deploy staging please",
       "deploy prod",
