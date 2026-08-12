@@ -10,17 +10,17 @@ Use [TCTBP Agent.md](TCTBP%20Agent.md) for the full workflow rules and guard rai
 | Trigger family | Primary command path | Mutates repo? |
 |---|---|---|
 | status | `node scripts/tctbp-run-status.js [--suggest]` or `--json --no-fetch` | No |
+| preflight | `node scripts/tctbp-run-preflight.js` | No (non-mutating) |
 | checkpoint | `node scripts/tctbp-run-checkpoint.js` | Local commit only |
 | publish | `node scripts/tctbp-run-publish.js` | May push current branch |
 | handover | `node scripts/tctbp-run-handover.js` | May checkpoint + publish |
 | handover local | `node scripts/tctbp-run-handover.js --local-only` | Local commit only |
 | resume | `node scripts/tctbp-run-resume.js` | Local sync only |
-| orient | Copilot reads continuation context | No |
+| orient | `node scripts/tctbp-run-orient.js` | No |
 | promote | `node scripts/tctbp-run-promote.js <staging\|review\|production>` | Local/remote per target policy |
 | deploy | `node scripts/tctbp-run-deploy.js <dev\|staging\|review\|production>` | Local/remote per target policy |
 | release | `node scripts/tctbp-run-release.js --no-docs-impact "<reason>"` | Full pipeline compose |
 | ticket | `node scripts/tctbp-run-ticket.js <create\|report\|triage> ...` | `create` writes only with `--apply` |
-| workflow | `node scripts/tctbp-run-workflow.js <deploy\|promote\|branch> ...` | Routes to sub-runners |
 | branch | `node scripts/tctbp-run-branch.js [new-branch-name]` | Local merge/branch ops |
 | ship | `node scripts/tctbp-run-ship.js --no-docs-impact "<reason>" --yes` | Commit/tag/push on `main` |
 | hotfix | `node scripts/tctbp-run-hotfix.js {start \| finish}` | Creates hotfix branch; merges, ships, and backports |
@@ -97,11 +97,27 @@ Notes:
 - The generated profile is fully populated — no placeholders to fill in.
 - Test scaffolding (Vitest by default) is included so the test gate passes on day one.
 
-### `ship` / `ship please` / `shipping` / `prepare release`
+### `ship` / `ship please` / `shipping`
 
 Purpose: Formal shipped version workflow. Reserved for `main`.
 
 Executable path: `node scripts/tctbp-run-ship.js --no-docs-impact "<reason>" --yes`
+
+### `release` / `release please` / `prepare release` / `prepare release please`
+
+Purpose: Run or resume the staged deploy → promote → ship pipeline with an atomic release journal and commit/tree candidate revalidation. `prepare release` routes to release, not ship.
+
+Executable paths:
+- `node scripts/tctbp-run-release.js --no-docs-impact "<reason>"`
+- `node scripts/tctbp-run-release.js --resume`
+
+The generic runner does not assume DDRE backup, restore, systemd, or runtime-storage behaviour. Downstream projects supply those integrations separately.
+
+### `preflight` / `preflight please`
+
+Purpose: Non-mutating aggregate verification of the current working state before preserving, publishing, handing over, promoting, deploying, or otherwise advancing. Reports PASS / FAIL / NOT-CONFIGURED and detects side effects caused by verification commands.
+
+Executable path: `node scripts/tctbp-run-preflight.js`
 
 ### `hotfix` / `hotfix start` / `hotfix finish` / `emergency fix`
 
@@ -114,16 +130,6 @@ Executable paths:
 Notes:
 - `finish` always ships with `--bump patch` unless another bump is supplied.
 - `finish` pushes the shipped `main` branch, then backports it to the configured pre-production and working branches and pushes those.
-
-### `prepare release` with `--resume`
-
-Purpose: Run or resume the staged deploy → promote → ship pipeline with an atomic release journal and commit/tree candidate revalidation.
-
-Executable paths:
-- `node scripts/tctbp-run-release.js --no-docs-impact "<reason>"`
-- `node scripts/tctbp-run-release.js --resume`
-
-The generic runner does not assume DDRE backup, restore, systemd, or runtime-storage behaviour. Downstream projects supply those integrations separately.
 
 ### `publish` / `publish please`
 

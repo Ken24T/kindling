@@ -268,9 +268,29 @@ Handover never merges into staging or main as part of the sync flow. Code-loss s
 
 ---
 
+## Preflight Workflow
+
+Trigger: `preflight` / `preflight please`
+
+Purpose: non-mutating aggregate verification of the current working state — including uncommitted changes — before preserving, publishing, handing over, promoting, deploying, or otherwise advancing.
+
+Executable path: `node scripts/tctbp-run-preflight.js`
+
+Preflight runs:
+
+1. **Git sanity** — attached HEAD, branch identification.
+2. **Active operation detection** — merge, rebase, cherry-pick, or revert in progress.
+3. **Working-tree inspection** — reports clean vs dirty state without requiring a clean tree.
+4. **Configured quality gates** — test, lint, build, format, release-build when configured; unconfigured gates report NOT-CONFIGURED.
+5. **Side-effect detection** — the working tree is compared before and after verification; any modification caused by a verification command is reported rather than silently accepted.
+
+Preflight never commits, pushes, tags, merges, switches branch, deploys, bumps a version, creates release state, or modifies remote state. It reports a concise PASS / FAIL / NOT-CONFIGURED summary and exits non-zero only on FAIL.
+
+---
+
 ## SHIP Workflow
 
-Trigger: `ship` / `ship please` / `shipping` / `prepare release`
+Trigger: `ship` / `ship please` / `shipping`
 
 Purpose: create a formal shipped production version from a clean, fetched `main` branch.
 
@@ -289,9 +309,9 @@ Ship is reserved for `main` so version tags remain production release markers. T
 
 Patch bump behaviour is controlled by `versioning.patchEveryShip` and `versioning.patchEveryShipForDocsInfrastructureOnly`. Minor and major bumps are explicit release decisions on `main`.
 
-### Journaled release orchestration
+### Release orchestration
 
-For staged projects, `scripts/tctbp-run-release.js` composes deploy, promote, and ship into a journaled workflow. Each stage records atomic evidence under the configured `releaseState.path`, including the candidate commit and tree. Use `--resume` after an interrupted workflow; resume revalidates the candidate and shipped tag before continuing. The release journal is ignored by Git and must never be treated as a release artefact.
+`release` / `prepare release` are public triggers for the composite release orchestrator. For staged projects, `scripts/tctbp-run-release.js` composes deploy, promote, and ship into a journaled workflow. Each stage records atomic evidence under the configured `releaseState.path`, including the candidate commit and tree. Use `--resume` after an interrupted workflow; resume revalidates the candidate and shipped tag before continuing. The release journal is ignored by Git and must never be treated as a release artefact.
 
 The generic runner does not assume a backup format, service manager, runtime storage layout, or restore rehearsal. Downstream projects must provide those integrations through their own profile and adapters. DDRE-specific backup and restore runners are not part of TCTBP-Web.
 

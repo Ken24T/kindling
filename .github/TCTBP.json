@@ -40,6 +40,7 @@
     ],
     "workflowIds": [
       "status",
+      "preflight",
       "abort",
       "resume",
       "checkpoint",
@@ -49,7 +50,14 @@
       "promote",
       "deploy",
       "ship",
-      "hotfix"
+      "hotfix",
+      "release",
+      "ticket",
+      "gate",
+      "version",
+      "rollback",
+      "scaffold",
+      "orient"
     ]
   },
   "governance": {
@@ -159,7 +167,7 @@
         "maxLines": 40,
         "preferPure": true,
         "noAnyInExportedSignatures": true,
-        "comment": "Keep functions small and focused. Prefer pure functions. (noAnyInExportedSignatures is a TypeScript rule kept for schema compatibility; Rust has no 'any' type.)"
+        "comment": "Keep functions small and focused. Prefer pure functions. Avoid 'any' in exported TypeScript signatures."
       }
     }
   },
@@ -246,7 +254,10 @@
       "ship",
       "ship please",
       "shipping",
+      "release",
+      "release please",
       "prepare release",
+      "prepare release please",
       "checkpoint",
       "checkpoint please",
       "publish",
@@ -261,16 +272,6 @@
       "promote prod please",
       "deploy",
       "deploy please",
-      "deploy dev",
-      "deploy dev please",
-      "deploy development",
-      "deploy development please",
-      "deploy staging",
-      "deploy staging please",
-      "deploy prod",
-      "deploy prod please",
-      "deploy production",
-      "deploy production please",
       "handover",
       "handover please",
       "handover local",
@@ -281,7 +282,12 @@
       "orient please",
       "status",
       "status please",
+      "preflight",
+      "preflight please",
       "abort",
+      "ticket create",
+      "ticket report",
+      "ticket triage",
       "run tests",
       "run lint",
       "run build",
@@ -291,7 +297,25 @@
       "version status",
       "version check",
       "rollback",
-      "revert last checkpoint"
+      "revert last checkpoint",
+      "hotfix",
+      "hotfix please",
+      "hotfix start",
+      "hotfix start please",
+      "hotfix finish",
+      "hotfix finish please",
+      "emergency fix",
+      "emergency fix please",
+      "deploy dev",
+      "deploy dev please",
+      "deploy development",
+      "deploy development please",
+      "deploy staging",
+      "deploy staging please",
+      "deploy prod",
+      "deploy prod please",
+      "deploy production",
+      "deploy production please"
     ],
     "caseInsensitive": true,
     "branchCommand": {
@@ -308,8 +332,7 @@
     "preferredTriggers": [
       "ship",
       "ship please",
-      "shipping",
-      "prepare release"
+      "shipping"
     ],
     "executionCommand": "node scripts/tctbp-run-ship.js --no-docs-impact \"<reason>\" --yes",
     "requireFetchedOriginInPreflight": true,
