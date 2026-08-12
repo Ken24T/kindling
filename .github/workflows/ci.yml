@@ -27,6 +27,9 @@ jobs:
       - name: Cache
         uses: Swatinem/rust-cache@v2
 
+      - name: Install GUI system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev libgtk-3-dev
+
       - name: Format check
         run: cargo fmt --check
 

@@ -139,6 +139,23 @@ App-layer plan:
 - GUI M1: Explorer shell — left section pane (Local Library / Kindle Library) + right
   preview pane + cover grid, mock data first, then real `inventory_device` + `LocalLibrary`.
 
+### GUI M1 — iced Explorer shell — **done** (2026-08-12)
+
+- `apps/kindling-gui` is a workspace member (iced 0.14, `kindred` path dep). Entry via
+  `iced::application` (title “Kindling”, 1200×800).
+- Small modules per the code-splitting rules: `model.rs` (state/messages/update),
+  `mock.rs` (60 invented titles, deterministic ids/statuses), `view/` split into
+  `mod.rs` (layout), `sidebar.rs`, `grid.rs` (cover grid via iced `Grid::fluid`),
+  `preview.rs`, `theme.rs` (styles + hash-derived pastel cover colours).
+- Three-pane Explorer: left sections (Local Library / Kindle Library with counts),
+  centre cover grid (status badges, selection highlight), right preview pane, status bar.
+- 4 unit tests on the update logic (section switch, selection, section filtering) —
+  windowless, matching the testability case for iced.
+- Verified: builds, gates green, launches cleanly (no panic) on the dev machine.
+- Spike items still open for GUI M2: pane-to-pane drag-and-drop (custom iced work),
+  real `inventory_device` + `LocalLibrary` wiring, list/details view modes.
+- CI: ubuntu job installs `libxkbcommon-dev libwayland-dev libgtk-3-dev` for iced/winit.
+
 ## Kindle Collections — investigation only (2026-08-12)
 
 Collections on modern Kindle firmware (12th-gen, 5.19.x) are cloud-synced “Amazon

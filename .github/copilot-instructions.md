@@ -979,7 +979,7 @@ Current state (2026-08-12):
 - The repo runs the TCTBP staged branch model (§22); work continues on `development`.
 - The Milestone 3 planning session is complete; the agreed scope is recorded in `PLAN.md` (root).
 - Milestones 3, 4 and 5 are complete — see §9 (inventory model, controlled transfer proof, and safe device-management operations).
-- **Next step:** the profile registry (§16, `profile.rs`) and the local JSON library (`library.rs`) slices are complete. Milestones 6 and 7 (§9) are complete (sidecar metadata association + device wiki). The error abstraction slice (§17) is complete, and the GUI framework decision is **resolved (2026-08-12: iced)** — recorded in PLAN.md. The next step is the GUI app shell (`apps/kindling-gui`, GUI M1 per PLAN.md). The repo is at a stable checkpoint on `development`.
+- **Next step:** the profile registry (§16, `profile.rs`) and the local JSON library (`library.rs`) slices are complete. Milestones 6 and 7 (§9) are complete (sidecar metadata association + device wiki). The error abstraction slice (§17) is complete, and the GUI framework decision is **resolved (2026-08-12: iced)** — recorded in PLAN.md. The iced Explorer shell (`apps/kindling-gui`, GUI M1 per PLAN.md) is complete and launch-verified; next is GUI M2 (real `inventory_device`/`LocalLibrary` wiring, pane-to-pane drag-drop). The repo is at a stable checkpoint on `development`.
 
 A good next sequence is:
 
