@@ -63,7 +63,7 @@ These safeguards exist because a single destructive sync can silently delete fil
 
 Before merging **any** branch into a default or environment branch, create a lightweight safety tag:
 
-```
+```bash
 git tag safety/<branch-name>-<YYYYMMDD> <target-branch>
 ```
 
@@ -78,7 +78,7 @@ This ensures the pre-merge state is always recoverable with a single `git checko
 After the merge completes but **before committing or pushing**, run a deletion audit. Thresholds are configured in `TCTBP.json` under `codeLossPrevention.mergeDeletionAudit`:
 
 | Condition | Action |
-|---|---|
+| --- | --- |
 | 0 files deleted | Proceed silently |
 | 1–5 files deleted, <500 lines removed | Log the list, proceed with a note |
 | >5 files deleted **or** >500 lines removed | **STOP.** Display the full list of deleted files. Require explicit user confirmation. |
@@ -241,11 +241,13 @@ The `handover local` variant creates a local-only checkpoint without pushing to 
 **Every handover invocation MUST include a session narrative** so `orient` / `resume` can recover full context — not just git stats.
 
 The note is resolved in this order:
+
 1. `--note "<markdown>"` — user-provided text (highest priority)
 2. `--note-file <path>` — agent writes session context to a temp file, passes the path
 3. Auto-generated from git commit messages (fallback)
 
 **Agent procedure when the user does not provide a note:**
+
 1. Compose a 2–5 sentence narrative from the session's chat context: what was done, key design decisions, gotchas encountered, and unfinished items.
 2. Write the narrative to a temp file: `/tmp/tctbp-handover-note-<timestamp>.md`
 3. Invoke the runner: `node scripts/tctbp-run-handover.js --note-file /tmp/tctbp-handover-note-<timestamp>.md`
@@ -326,9 +328,11 @@ Purpose: explicitly merge the current source branch into the target environment 
 Executable path: `node scripts/tctbp-run-promote.js <staging|production> --no-docs-impact "<reason>"`
 
 **`promote staging`** (development → staging):
+
 - Verifies and syncs development, creates a safety snapshot of staging, merges development into staging, runs the deletion audit, verifies and builds staging, publishes staging to origin, returns to development.
 
 **`promote production`** (staging → main):
+
 - Verifies staging, creates a safety snapshot of main, merges staging into main, runs the deletion audit, verifies main. Does NOT push main — `ship` and `deploy production` are separate explicit workflows. Stays on main.
 
 Promotion is a merge workflow, not a deploy workflow. When `branchModel.strategy` is `"simple"`, promote is disabled.
@@ -342,10 +346,12 @@ Trigger: `hotfix` / `hotfix start` / `hotfix finish` / `emergency fix`
 Purpose: emergency-lane production fix that bypasses the normal promote-review/promote-production chain. Creates a `hotfix/*` branch from `main`, merges it into `main`, ships a patch release, and backports the new `main` into the pre-production and working branches.
 
 Executable paths:
+
 - `node scripts/tctbp-run-hotfix.js start <name>` — create `hotfix/<name>` from the production branch
 - `node scripts/tctbp-run-hotfix.js finish --no-docs-impact "<reason>"` — merge, ship, and backport
 
 Notes:
+
 - `start` requires the current branch to be the production branch with a clean working tree.
 - `finish` requires the current branch to be a `hotfix/*` branch with a clean working tree.
 - `finish` runs verification gates before merging and ships with `--bump patch` by default.
@@ -361,6 +367,7 @@ Trigger: `deploy dev` / `deploy development` / `deploy staging` / `deploy prod` 
 Purpose: deploy the current environment branch to its mapped runtime environment. Never promotes code between branches.
 
 Executable paths:
+
 - `node scripts/tctbp-run-deploy.js dev --no-docs-impact "<reason>"`
 - `node scripts/tctbp-run-deploy.js staging --no-docs-impact "<reason>"`
 - `node scripts/tctbp-run-deploy.js production --no-docs-impact "<reason>"`
@@ -368,7 +375,7 @@ Executable paths:
 Per-target behaviour:
 
 | Target | Branch | Sync strategy | Can commit? |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `dev` | `development` | commit-and-publish-current-branch-when-needed | Yes (with explicit dirty-sync confirmation) |
 | `staging` | `staging` | push-clean-branch-when-needed | No (must already be clean) |
 | `production` | `main` | require-already-published-shipped-branch | No |

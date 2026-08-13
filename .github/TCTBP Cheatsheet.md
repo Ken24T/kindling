@@ -8,7 +8,7 @@ Use [TCTBP Agent.md](TCTBP%20Agent.md) for the full workflow rules and guard rai
 ## Concise Cheat Sheet
 
 | Trigger family | Primary command path | Mutates repo? |
-|---|---|---|
+| --- | --- | --- |
 | status | `node scripts/tctbp-run-status.js [--suggest]` or `--json --no-fetch` | No |
 | preflight | `node scripts/tctbp-run-preflight.js` | No (non-mutating) |
 | checkpoint | `node scripts/tctbp-run-checkpoint.js` | Local commit only |
@@ -108,6 +108,7 @@ Executable path: `node scripts/tctbp-run-ship.js --no-docs-impact "<reason>" --y
 Purpose: Run or resume the staged deploy → promote → ship pipeline with an atomic release journal and commit/tree candidate revalidation. `prepare release` routes to release, not ship.
 
 Executable paths:
+
 - `node scripts/tctbp-run-release.js --no-docs-impact "<reason>"`
 - `node scripts/tctbp-run-release.js --resume`
 
@@ -124,10 +125,12 @@ Executable path: `node scripts/tctbp-run-preflight.js`
 Purpose: Emergency-lane production fix that bypasses the normal promote-review-promote-production flow.
 
 Executable paths:
+
 - `node scripts/tctbp-run-hotfix.js start <name>` — create `hotfix/<name>` from `main`
 - `node scripts/tctbp-run-hotfix.js finish --no-docs-impact "<reason>"` — merge hotfix to `main`, ship, and backport to pre-production and working branches
 
 Notes:
+
 - `finish` always ships with `--bump patch` unless another bump is supplied.
 - `finish` pushes the shipped `main` branch, then backports it to the configured pre-production and working branches and pushes those.
 
@@ -166,6 +169,7 @@ Executable path: `node scripts/tctbp-run-promote.js <staging|production> --no-do
 Purpose: Deploy the current environment branch to its mapped runtime environment.
 
 Executable paths:
+
 - `node scripts/tctbp-run-deploy.js dev --no-docs-impact "<reason>"`
 - `node scripts/tctbp-run-deploy.js staging --no-docs-impact "<reason>"`
 - `node scripts/tctbp-run-deploy.js production --no-docs-impact "<reason>"`

@@ -1,6 +1,6 @@
 {
   "sourceRepository": "Ken24T/TCTBP-Web",
-  "sourceRevision": "9bf36eb646a2bde2ae0bc0c20a45e9182139f1f9",
+  "sourceRevision": "468c501835602e58c66bbfc7b02aeb4aa0e04e31",
   "sourceVersion": "0.3.6",
   "installedSchemaVersion": 11,
   "adviserContract": {
@@ -13,7 +13,7 @@
       "version-files.multi-format-v1"
     ]
   },
-  "installedAt": "2026-08-12",
+  "installedAt": "2026-08-13",
   "managedSurface": [
     ".github/TCTBP Agent.md",
     ".github/TCTBP Cheatsheet.md",
