@@ -1,5 +1,15 @@
 # Kindling: Copilot Project Instructions
 
+## Shared code and documentation policy
+
+This repository adopts shared-development-policy 1.0.0. Read
+`.github/DEVELOPMENT_POLICY.md` and its machine-readable companion
+`.github/development-policy.json` for code, configuration and documentation work.
+Use `node scripts/check-modularity.cjs --changed` for advisory size signals.
+Record design reviews for new or materially changed large files in change notes.
+File size alone never requires a split or grants approval to commit or publish.
+Existing correctness, security, Git and approval protections remain in force.
+
 ## 1. Project identity
 
 **Kindling** is a Rust-based, cross-platform Kindle book-management application intended to run on **Linux and Windows**.
@@ -792,16 +802,9 @@ cargo clippy --workspace --all-targets
 
 Do not claim an operation works on real hardware until it has actually been run against the physical Paperwhite and its output has been observed.
 
-### Modularity rules (read first)
+### Rust module naming
 
-AI agents tend to accrete code into existing files. Resist that. These limits mirror `.github/TCTBP.json` → `developmentPolicy` (the machine-readable source of truth):
-
-- **250 lines:** soft ceiling. When a file approaches this, ask whether the new code belongs in a new module.
-- **400 lines:** warning threshold. Files above this require a comment at the top justifying why they haven't been split.
-- **600 lines:** hard split. Files at or above this MUST be split before the next checkpoint. No exceptions.
-- **Functions:** keep under 40 lines. Prefer pure functions; side effects should be explicit and documented.
-- **Modules:** split when a group of 3+ related functions emerges, or when a single module accumulates many responsibilities. One clear purpose per file — if you need "and also" to describe it, split it.
-- **Naming:** snake_case file/module names that match the crate layout (`usb.rs`, `mtp.rs`). Prefer small cohesive modules over large multi-purpose files.
+Use snake_case names that match the crate layout. Prefer cohesive modules and explicit side effects.
 
 ### Critical rules
 
